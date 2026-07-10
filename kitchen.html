@@ -112,7 +112,7 @@ const ago = (iso) => {
 };
 
 const el = (id) => document.getElementById(id);
-let shops = [], shopId = null, ownerId = null, orders = [], prodCache = null, unsub = null;
+let shops = [], shopId = null, ownerId = null, orders = [], prodCache = null, unsub = null, hidePrices = false;
 
 // ---- Auth ----
 el("loginForm").addEventListener("submit", async (e) => {
@@ -160,6 +160,7 @@ function selectShop(id) {
   shopId = id; prodCache = null;
   const s = shops.find(x => x.$id === id);
   el("shopName").textContent = s ? s.name : "";
+  hidePrices = !!(s && s.hideStaffPrices); // owner hid money from kitchen staff
   loadOrders();
 }
 
@@ -206,9 +207,9 @@ function render() {
       </div>
       <div class="time">${ago(o.$createdAt)}</div>
       <div class="items">${items}</div>
-      <div class="total">${soum(o.amount)} so'm</div>
+      ${hidePrices ? "" : `<div class="total">${soum(o.amount)} so'm</div>`}
       ${advance}
-      <button class="act pay" data-pay="${o.$id}">To'lov</button>
+      ${hidePrices ? "" : `<button class="act pay" data-pay="${o.$id}">To'lov</button>`}
     </div>`;
   }).join("");
 }
