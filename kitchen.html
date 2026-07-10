@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Xurmo — Oshxona ekrani (KDS)</title>
+<style>
+  :root{
+    --bg:#0e1116; --card:#1a1f27; --line:#2a313c; --muted:#8a93a2;
+    --text:#eef2f7; --teal:#DA7452; --new:#E5484D; --prep:#F5A623;
+    --ready:#1FA463; --served:#6b7280;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  button{font-family:inherit;cursor:pointer;border:0}
+  /* ---- Login ---- */
+  #login{min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px}
+  .card-login{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:28px;width:100%;max-width:380px}
+  .card-login h1{font-size:22px;margin-bottom:4px}
+  .card-login p{color:var(--muted);font-size:14px;margin-bottom:20px}
+  .field{display:block;width:100%;background:#0e1116;border:1px solid var(--line);color:var(--text);
+    border-radius:12px;padding:14px 16px;font-size:16px;margin-bottom:12px;outline:none}
+  .field:focus{border-color:var(--teal)}
+  .btn{width:100%;background:var(--teal);color:#fff;border-radius:999px;padding:14px;font-size:16px;font-weight:700}
+  .btn:disabled{opacity:.5}
+  .err{color:var(--new);font-size:13px;margin-top:8px;min-height:18px;text-align:center}
+  /* ---- Header ---- */
+  header{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:12px;padding:14px 20px;z-index:5}
+  header .dot{width:9px;height:9px;border-radius:50%;background:var(--ready);box-shadow:0 0 0 0 rgba(31,164,99,.6);animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(31,164,99,.5)}70%{box-shadow:0 0 0 8px rgba(31,164,99,0)}100%{box-shadow:0 0 0 0 rgba(31,164,99,0)}}
+  header h2{font-size:18px;font-weight:800;flex:1}
+  header .shop{color:var(--muted);font-size:14px}
+  header select,header .logout{background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:8px 12px;font-size:14px}
+  /* ---- Grid ---- */
+  #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;padding:18px}
+  .ticket{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column}
+  .ticket.new{border-color:var(--new)} .ticket.preparing{border-color:var(--prep)}
+  .ticket.ready{border-color:var(--ready)} .ticket.served{border-color:var(--served)}
+  .thead{display:flex;align-items:center;justify-content:space-between}
+  .table{font-size:18px;font-weight:800;padding:4px 10px;border-radius:10px}
+  .new .table{background:rgba(229,72,77,.15);color:var(--new)}
+  .preparing .table{background:rgba(245,166,35,.15);color:var(--prep)}
+  .ready .table{background:rgba(31,164,99,.15);color:var(--ready)}
+  .served .table{background:rgba(107,114,128,.2);color:#c7cdd6}
+  .time{color:var(--muted);font-size:12px;margin-top:6px}
+  .items{margin:10px 0;flex:1}
+  .items .row{display:flex;justify-content:space-between;padding:3px 0;font-size:15px}
+  .items .q{color:var(--teal);font-weight:800}
+  .total{font-size:17px;font-weight:800;padding-top:8px;border-top:1px solid var(--line);margin-bottom:10px}
+  .act{width:100%;border-radius:10px;padding:10px;font-size:14px;font-weight:700;color:#fff;margin-top:6px}
+  .act.pay{background:var(--teal)}
+  .x{background:none;color:var(--muted);font-size:20px;line-height:1;padding:0 4px}
+  .empty{text-align:center;color:var(--muted);padding:80px 20px;font-size:16px}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <form class="card-login" id="loginForm">
+    <h1>Oshxona ekrani</h1>
+    <p>Do'kon egasi telefon raqami va paroli bilan kiring.</p>
+    <input class="field" id="phone" inputmode="tel" placeholder="Telefon (998…)" autocomplete="username" />
+    <input class="field" id="password" type="password" placeholder="Parol" autocomplete="current-password" />
+    <button class="btn" id="loginBtn" type="submit">Kirish</button>
+    <div class="err" id="loginErr"></div>
+  </form>
+</div>
+
+<!-- KDS -->
+<div id="app" class="hidden">
+  <header>
+    <span class="dot"></span>
+    <h2>Oshxona</h2>
+    <select id="shopSel" class="hidden"></select>
+    <span class="shop" id="shopName"></span>
+    <button class="logout" id="logout">Chiqish</button>
+  </header>
+  <div id="grid"></div>
+</div>
+
+<script type="module">
+import { Client, Account, Databases, Query, ID, Permission, Role }
+  from "https://cdn.jsdelivr.net/npm/appwrite@16/+esm";
+
+const ENDPOINT = "https://fra.cloud.appwrite.io/v1";
+const PROJECT  = "6a31294f001a2a57fbc2";
+const DB       = "6a142bb0000b642f77f1";
+const C_KITCHEN = "kitchen_orders";
+const C_BIZ = "businesses", C_SALES = "sales", C_PROD = "products";
+const ACTIVE = ["new","preparing","ready","served"];
+const FLOW = {
+  new:      {label:"Boshlash", next:"preparing"},
+  preparing:{label:"Tayyor",   next:"ready"},
+  ready:    {label:"Berildi",  next:"served"},
+  served:   {label:"Berilgan", next:null},
+};
+
+const client = new Client().setEndpoint(ENDPOINT).setProject(PROJECT);
+const account = new Account(client);
+const db = new Databases(client);
+const phoneToEmail = (p) => `${(p||"").replace(/\D/g,"")}@xurmomercato.uz`;
+const soum = (n) => Number(n||0).toLocaleString("en-US").replace(/,/g," ");
+const parseLines = (o) => { try { return o.lines ? JSON.parse(o.lines) : []; } catch { return []; } };
+const ago = (iso) => {
+  const m = Math.max(0, Math.round((Date.now()-new Date(iso).getTime())/60000));
+  return m < 1 ? "hozirgina" : m + " daq oldin";
+};
+
+const el = (id) => document.getElementById(id);
+let shops = [], shopId = null, ownerId = null, orders = [], prodCache = null, unsub = null;
+
+// ---- Auth ----
+el("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = el("loginBtn"); btn.disabled = true; el("loginErr").textContent = "";
+  try {
+    try { await account.deleteSession("current"); } catch {}
+    await account.createEmailPasswordSession(phoneToEmail(el("phone").value), el("password").value);
+    await start();
+  } catch (err) {
+    el("loginErr").textContent = "Telefon yoki parol xato";
+  } finally { btn.disabled = false; }
+});
+
+el("logout").addEventListener("click", async () => {
+  try { await account.deleteSession("current"); } catch {}
+  if (unsub) unsub();
+  location.reload();
+});
+
+el("shopSel").addEventListener("change", (e) => selectShop(e.target.value));
+
+async function start() {
+  const me = await account.get();
+  ownerId = me.$id;
+  const res = await db.listDocuments(DB, C_BIZ, [Query.equal("ownerId", ownerId), Query.limit(50)]);
+  // Prefer FOOD shops; fall back to all so any owner can open the screen.
+  shops = res.documents.filter(b => b.mode === "food");
+  if (shops.length === 0) shops = res.documents;
+  if (shops.length === 0) { el("loginErr").textContent = "Do'kon topilmadi"; return; }
+
+  el("login").classList.add("hidden");
+  el("app").classList.remove("hidden");
+
+  const sel = el("shopSel");
+  if (shops.length > 1) {
+    sel.classList.remove("hidden");
+    sel.innerHTML = shops.map(s => `<option value="${s.$id}">${s.name}</option>`).join("");
+  }
+  subscribe();
+  selectShop(shops[0].$id);
+}
+
+function selectShop(id) {
+  shopId = id; prodCache = null;
+  const s = shops.find(x => x.$id === id);
+  el("shopName").textContent = s ? s.name : "";
+  loadOrders();
+}
+
+function subscribe() {
+  if (unsub) unsub();
+  unsub = client.subscribe(`databases.${DB}.collections.${C_KITCHEN}.documents`, (msg) => {
+    const d = msg.payload;
+    if (d && d.shopId === shopId) loadOrders();
+  });
+}
+
+async function loadOrders() {
+  const id = shopId;
+  try {
+    const res = await db.listDocuments(DB, C_KITCHEN, [
+      Query.equal("shopId", id),
+      Query.equal("status", ACTIVE),
+      Query.orderAsc("$createdAt"),
+      Query.limit(100),
+    ]);
+    if (id !== shopId) return; // shop switched mid-flight
+    orders = res.documents;
+    render();
+  } catch (e) { console.error(e); }
+}
+
+// Fallback refresh in case a realtime event is missed.
+setInterval(() => { if (shopId) loadOrders(); }, 15000);
+setInterval(render, 30000); // keep "X daq oldin" fresh
+
+function render() {
+  const grid = el("grid");
+  if (!orders.length) { grid.innerHTML = `<div class="empty">Faol buyurtma yo'q</div>`; return; }
+  grid.innerHTML = orders.map(o => {
+    const st = o.status; const flow = FLOW[st] || FLOW.served;
+    const lines = parseLines(o);
+    const items = lines.map(l => `<div class="row"><span>${escapeHtml(l.name)}</span><span class="q">×${l.qty}</span></div>`).join("");
+    const advance = flow.next
+      ? `<button class="act" style="background:var(--${st==='new'?'new':st==='preparing'?'prep':'ready'})" data-adv="${o.$id}">${flow.label}</button>` : "";
+    return `<div class="ticket ${st}">
+      <div class="thead">
+        <span class="table">${o.tableNo ? escapeHtml(o.tableNo) : "Stolsiz"}</span>
+        <button class="x" data-void="${o.$id}">×</button>
+      </div>
+      <div class="time">${ago(o.$createdAt)}</div>
+      <div class="items">${items}</div>
+      <div class="total">${soum(o.amount)} so'm</div>
+      ${advance}
+      <button class="act pay" data-pay="${o.$id}">To'lov</button>
+    </div>`;
+  }).join("");
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c])); }
+
+// ---- Actions (event delegation) ----
+el("grid").addEventListener("click", async (e) => {
+  const adv = e.target.closest("[data-adv]");
+  const pay = e.target.closest("[data-pay]");
+  const vd  = e.target.closest("[data-void]");
+  if (adv) return advance(adv.dataset.adv);
+  if (pay) return payOrder(pay.dataset.pay);
+  if (vd)  return voidOrder(vd.dataset.void);
+});
+
+async function advance(id) {
+  const o = orders.find(x => x.$id === id); if (!o) return;
+  const next = (FLOW[o.status]||{}).next; if (!next) return;
+  o.status = next; render();
+  try { await db.updateDocument(DB, C_KITCHEN, id, { status: next }); } catch { loadOrders(); }
+}
+
+async function voidOrder(id) {
+  if (!confirm("Buyurtma bekor qilinsinmi?")) return;
+  orders = orders.filter(x => x.$id !== id); render();
+  try { await db.updateDocument(DB, C_KITCHEN, id, { status: "void" }); } catch { loadOrders(); }
+}
+
+async function products() {
+  if (prodCache) return prodCache;
+  try {
+    const r = await db.listDocuments(DB, C_PROD, [Query.equal("businessId", shopId), Query.limit(500)]);
+    prodCache = r.documents;
+  } catch { prodCache = []; }
+  return prodCache;
+}
+
+async function payOrder(id) {
+  const o = orders.find(x => x.$id === id); if (!o) return;
+  if (!confirm(`Hisobni yopamizmi?\n${o.tableNo ? o.tableNo+" · " : ""}${soum(o.amount)} so'm`)) return;
+  const lines = parseLines(o);
+  try {
+    // 1) record the sale (revenue)
+    await db.createDocument(DB, C_SALES, ID.unique(), {
+      shopId: o.shopId, ownerId, cashierId: o.cashierId||"", cashierName: o.cashierName||"",
+      customerId: "", amount: o.amount, discountPercent: 0, discountAmount: 0,
+      finalAmount: o.amount, voided: false, lines: o.lines || "[]",
+    }, [Permission.read(Role.user(ownerId)), Permission.update(Role.user(ownerId)), Permission.delete(Role.user(ownerId))]);
+    // 2) deduct tracked stock (best-effort, mirrors the mobile app)
+    const prods = await products();
+    for (const l of lines) {
+      const p = prods.find(x => x.$id === l.productId);
+      if (p && p.trackStock) {
+        const next = Math.max(0, Number(p.stock||0) - Number(l.qty||0));
+        try { await db.updateDocument(DB, C_PROD, p.$id, { stock: next }); p.stock = next; } catch {}
+      }
+    }
+    // 3) close the ticket
+    await db.updateDocument(DB, C_KITCHEN, id, { status: "paid" });
+    orders = orders.filter(x => x.$id !== id); render();
+  } catch (e) { console.error(e); alert("Xatolik. Qayta urinib ko'ring."); loadOrders(); }
+}
+
+// ---- Auto-login if a session already exists (kitchen PC stays signed in) ----
+(async () => {
+  try { await account.get(); await start(); } catch { /* show login */ }
+})();
+</script>
+</body>
+</html>
