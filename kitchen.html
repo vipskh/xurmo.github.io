@@ -36,22 +36,16 @@
   header select,header .logout{background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:8px 12px;font-size:14px}
   /* ---- Grid ---- */
   #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;padding:18px}
+  /* Ticket border + table badge are coloured inline by how long it has waited. */
   .ticket{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column}
-  .ticket.new{border-color:var(--new)} .ticket.preparing{border-color:var(--prep)}
-  .ticket.ready{border-color:var(--ready)} .ticket.served{border-color:var(--served)}
   .thead{display:flex;align-items:center;justify-content:space-between}
   .table{font-size:18px;font-weight:800;padding:4px 10px;border-radius:10px}
-  .new .table{background:rgba(229,72,77,.15);color:var(--new)}
-  .preparing .table{background:rgba(245,166,35,.15);color:var(--prep)}
-  .ready .table{background:rgba(31,164,99,.15);color:var(--ready)}
-  .served .table{background:rgba(107,114,128,.2);color:#c7cdd6}
   .time{color:var(--muted);font-size:12px;margin-top:6px}
   .items{margin:10px 0;flex:1}
   .items .row{display:flex;justify-content:space-between;padding:3px 0;font-size:15px}
   .items .q{color:var(--teal);font-weight:800}
-  .total{font-size:17px;font-weight:800;padding-top:8px;border-top:1px solid var(--line);margin-bottom:10px}
+  .items em{font-style:italic;color:var(--prep);font-weight:600}
   .act{width:100%;border-radius:10px;padding:10px;font-size:14px;font-weight:700;color:#fff;margin-top:6px}
-  .act.pay{background:var(--teal)}
   .x{background:none;color:var(--muted);font-size:20px;line-height:1;padding:0 4px}
   .empty{text-align:center;color:var(--muted);padding:80px 20px;font-size:16px}
   .hidden{display:none!important}
