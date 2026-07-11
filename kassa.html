@@ -31,7 +31,12 @@
   header a, .logout { border:1px solid var(--line); background:#fff; border-radius:999px; padding:8px 14px; font-size:13px;
                       cursor:pointer; color:var(--ink); text-decoration:none; }
 
+  #disc { display:none; align-items:center; gap:12px; padding:12px 20px; background:#fff; border-bottom:1px solid var(--line); }
+  #qr { flex:1; max-width:420px; padding:10px 14px; border:1px solid var(--line); border-radius:12px; font-size:14px; }
+  #discState { font-size:14px; font-weight:700; color:var(--teal); }
+
   #bills { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; padding:20px; }
+  .bill .disc { display:flex; justify-content:space-between; font-size:13px; color:var(--teal); font-weight:700; padding-top:4px; }
   .bill { background:#fff; border-radius:16px; padding:16px; box-shadow:0 2px 10px rgba(0,0,0,.05); display:flex; flex-direction:column; }
   .bill h2 { margin:0 0 2px; font-size:20px; }
   .bill .when { color:var(--muted); font-size:12px; margin-bottom:10px; }
@@ -84,6 +89,14 @@
     <a href="./kitchen.html">Oshxona</a>
     <button class="logout" id="logout">Chiqish</button>
   </header>
+
+  <!-- Customer discount. A till PC has no camera, but a USB QR scanner types
+       like a keyboard — so the QR lands in this box and Enter applies it. -->
+  <div id="disc">
+    <input id="qr" placeholder="Mijoz QR — skanerlang yoki joylashtiring" autocomplete="off" />
+    <span id="discState"></span>
+  </div>
+
   <div id="bills"></div>
 </div>
 
@@ -117,7 +130,38 @@ const parseLines = (o) => { try { return o.lines ? JSON.parse(o.lines) : []; } c
 const two = (n) => String(n).padStart(2, "0");
 const stamp = (d) => `${two(d.getDate())}.${two(d.getMonth()+1)}.${d.getFullYear()} ${two(d.getHours())}:${two(d.getMinutes())}`;
 
-let shop = null, ownerId = null, orders = [], products = [], busy = {};
+let shop = null, ownerId = null, orders = [], products = [], busy = {}, customer = null;
+
+// ---- Customer discount ----
+// The QR carries {type:"xurmo_discount", user_id, shop}. A USB scanner types it
+// straight into the box; a phone photo can be pasted. Wrong shop → refuse it,
+// or one restaurant would honour another's discount.
+function readQr(raw) {
+  let o;
+  try { o = JSON.parse(raw); } catch { return null; }
+  if (!o || o.type !== "xurmo_discount" || !o.user_id) return null;
+  if (String(o.shop) !== String(shop.$id)) return "wrong_shop";
+  return String(o.user_id);
+}
+
+function applyQr(raw) {
+  const r = readQr(raw);
+  const box = el("discState");
+  if (r === null) { box.textContent = "QR o'qilmadi"; box.style.color = "#E5484D"; return; }
+  if (r === "wrong_shop") { box.textContent = "Bu QR boshqa do'kon uchun"; box.style.color = "#E5484D"; return; }
+  customer = r;
+  box.style.color = "var(--teal)";
+  box.textContent = `Mijoz topildi · −${shop.discountPercent || 0}%`;
+  render();
+}
+
+function clearCustomer() {
+  customer = null;
+  el("qr").value = "";
+  el("discState").textContent = "";
+}
+
+const pctNow = () => (customer ? Number(shop.discountPercent) || 0 : 0);
 
 // ---- Auth: one-time code, same as the kitchen screen ----
 const ERRORS = {
@@ -169,6 +213,20 @@ async function start() {
   el("app").style.display = "block";
   el("shopName").textContent = shop.name || "";
 
+  // Only a shop that actually gives a discount needs the QR box.
+  if ((Number(shop.discountPercent) || 0) > 0) {
+    el("disc").style.display = "flex";
+    const box = el("qr");
+    // A USB scanner "types" the QR and finishes with Enter; a paste fires input.
+    box.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        applyQr(box.value.trim());
+      }
+    });
+    box.addEventListener("paste", () => setTimeout(() => applyQr(box.value.trim()), 0));
+  }
+
   products = (await db.listDocuments(DB, C_PRODUCTS, [
     Query.equal("businessId", shop.$id), Query.limit(500),
   ]).catch(() => ({ documents: [] }))).documents;
@@ -214,7 +272,11 @@ function render() {
     wrap.innerHTML = `<div class="empty">Ochiq hisob yo'q — hammasi to'langan.</div>`;
     return;
   }
-  wrap.innerHTML = list.map((b) => `
+  const pct = pctNow();
+  wrap.innerHTML = list.map((b) => {
+    const off = Math.round((b.total * pct) / 100);
+    const due = b.total - off;
+    return `
     <div class="bill">
       <h2>${b.label}</h2>
       <div class="when">${stamp(new Date(b.at))}</div>
@@ -224,12 +286,14 @@ function render() {
           ${l.note ? `<li class="note">${esc(l.note)}</li>` : ""}
         `).join("")}
       </ul>
-      <div class="total"><span>To'lov</span><b>${soum(b.total)}</b></div>
+      ${off > 0 ? `<div class="disc"><span>Chegirma ${pct}%</span><span>−${soum(off)}</span></div>` : ""}
+      <div class="total"><span>To'lov</span><b>${soum(due)}</b></div>
       <button class="pay" data-key="${b.key}" ${busy[b.key] ? "disabled" : ""}>
         ${busy[b.key] ? "..." : "To'landi · chek"}
       </button>
     </div>
-  `).join("");
+  `;
+  }).join("");
 
   wrap.querySelectorAll(".pay").forEach((btn) => {
     btn.addEventListener("click", () => pay(list.find((b) => b.key === btn.dataset.key)));
@@ -239,31 +303,35 @@ function render() {
 const esc = (s) => String(s || "").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
 
 // ---- Payment ----
+// One bill = one sale = one receipt, even when the table ordered three times.
 async function pay(b) {
   if (!b || busy[b.key]) return;
+  const pct = pctNow();
+  const off = Math.round((b.total * pct) / 100);
+  const due = b.total - off;
+
   busy[b.key] = true; render();
   try {
-    for (const o of b.list) {
-      const lines = parseLines(o);
-      await db.createDocument(DB, C_SALES, ID.unique(), {
-        shopId: shop.$id,
-        ownerId: shop.ownerId,
-        cashierId: ownerId,
-        cashierName: "",
-        customerId: "",
-        amount: Math.round(o.amount || 0),
-        discountPercent: 0,
-        discountAmount: 0,
-        finalAmount: Math.round(o.amount || 0),
-        lines: lines.length ? JSON.stringify(lines) : "",
-        voided: false,
-      }, [Permission.read(Role.team(shop.$id))]);
+    await db.createDocument(DB, C_SALES, ID.unique(), {
+      shopId: shop.$id,
+      ownerId: shop.ownerId,
+      cashierId: ownerId,
+      cashierName: "",
+      customerId: customer || "",
+      amount: Math.round(b.total),
+      discountPercent: pct,
+      discountAmount: off,
+      finalAmount: due,
+      lines: b.lines.length ? JSON.stringify(b.lines) : "",
+      voided: false,
+    }, [Permission.read(Role.team(shop.$id))]);
 
-      await deductStock(lines);
-      await db.updateDocument(DB, C_KITCHEN, o.$id, { status: "paid" });
-    }
+    await deductStock(b.lines);
+    for (const o of b.list) await db.updateDocument(DB, C_KITCHEN, o.$id, { status: "paid" });
+
     orders = orders.filter((o) => !b.list.some((x) => x.$id === o.$id));
-    printReceipt(b);
+    printReceipt(b, pct, off, due);
+    clearCustomer(); // the next table is a different customer
   } catch (e) {
     alert("To'lovni yozib bo'lmadi. Qayta urinib ko'ring.");
     await loadOrders();
@@ -287,7 +355,7 @@ async function deductStock(lines) {
 }
 
 // ---- Receipt (browser → USB thermal printer) ----
-function printReceipt(b) {
+function printReceipt(b, pct = 0, off = 0, due = b.total) {
   const now = new Date();
   const no = String(Date.now()).slice(-6);
   el("paper").innerHTML = `
@@ -305,8 +373,13 @@ function printReceipt(b) {
       ${l.note ? `<div class="small">&nbsp;&nbsp;* ${esc(l.note)}</div>` : ""}
     `).join("")}
     <hr />
-    <div class="row big"><span>TO'LANDI</span><span>${soum(b.total)}</span></div>
+    ${off > 0 ? `
+      <div class="row"><span>Jami</span><span>${soum(b.total)}</span></div>
+      <div class="row"><span>Chegirma ${pct}%</span><span>-${soum(off)}</span></div>
+    ` : ""}
+    <div class="row big"><span>TO'LANDI</span><span>${soum(due)}</span></div>
     <hr />
+    ${off > 0 ? `<div class="c small">Xurmo chegirmasi: ${soum(off)} so'm tejadingiz</div>` : ""}
     <div class="c small">Xaridingiz uchun rahmat!</div>
     <div class="c small">xurmo.me</div>
   `;
