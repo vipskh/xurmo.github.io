@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Xurmo — Kassa</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧾</text></svg>" />
+<style>
+  :root { --teal:#DA7452; --ink:#191D31; --muted:#8C8E98; --line:#E7E9F0; --bg:#F7F7F9; --green:#1FA463; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--ink); }
+
+  /* Login (same one-time code as the kitchen screen) */
+  #login { min-height:100vh; display:grid; place-items:center; padding:24px; }
+  #login .card { background:#fff; border-radius:20px; padding:32px; width:min(420px,100%); box-shadow:0 8px 30px rgba(0,0,0,.06); }
+  #login h1 { margin:0 0 6px; font-size:22px; }
+  #login p { margin:0 0 20px; color:var(--muted); font-size:14px; }
+  #code { width:100%; padding:14px 16px; font-size:22px; letter-spacing:3px; text-align:center; text-transform:uppercase;
+          border:1px solid var(--line); border-radius:14px; font-family:ui-monospace,monospace; }
+  #login button { width:100%; margin-top:14px; padding:14px; border:0; border-radius:999px; background:var(--teal); color:#fff;
+                  font-weight:700; font-size:16px; cursor:pointer; }
+  #login button:disabled { opacity:.5; }
+  #loginErr { color:#E5484D; font-size:13px; min-height:18px; margin-top:10px; text-align:center; }
+
+  /* App */
+  #app { display:none; min-height:100vh; }
+  header { display:flex; align-items:center; gap:12px; padding:14px 20px; background:#fff; border-bottom:1px solid var(--line);
+           position:sticky; top:0; z-index:5; }
+  header h1 { font-size:18px; margin:0; }
+  .shop { color:var(--muted); font-size:14px; flex:1; }
+  header a, .logout { border:1px solid var(--line); background:#fff; border-radius:999px; padding:8px 14px; font-size:13px;
+                      cursor:pointer; color:var(--ink); text-decoration:none; }
+
+  #bills { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; padding:20px; }
+  .bill { background:#fff; border-radius:16px; padding:16px; box-shadow:0 2px 10px rgba(0,0,0,.05); display:flex; flex-direction:column; }
+  .bill h2 { margin:0 0 2px; font-size:20px; }
+  .bill .when { color:var(--muted); font-size:12px; margin-bottom:10px; }
+  .items { list-style:none; margin:0 0 12px; padding:0; flex:1; }
+  .items li { display:flex; justify-content:space-between; gap:8px; padding:4px 0; font-size:14px; }
+  .items .note { color:var(--muted); font-style:italic; font-size:12px; }
+  .total { display:flex; justify-content:space-between; align-items:baseline; border-top:1px dashed var(--line); padding-top:10px; }
+  .total b { font-size:20px; }
+  .pay { margin-top:12px; width:100%; padding:12px; border:0; border-radius:12px; background:var(--green); color:#fff;
+         font-weight:700; font-size:15px; cursor:pointer; }
+  .pay:disabled { opacity:.5; }
+  .empty { padding:80px 20px; text-align:center; color:var(--muted); }
+
+  /* The receipt itself — hidden on screen, and the ONLY thing that prints. */
+  #receipt { display:none; }
+  @media print {
+    body { background:#fff; }
+    #login, #app { display:none !important; }
+    #receipt { display:block !important; }
+  }
+  /* 58mm thermal paper. A USB receipt printer is just a printer to the browser:
+     give it the right page size and it burns exactly this. */
+  @page { size:58mm auto; margin:0; }
+  #receipt .paper { width:58mm; padding:4mm 3mm; font:12px/1.35 ui-monospace,"Courier New",monospace; color:#000; }
+  #receipt .c { text-align:center; }
+  #receipt .logo { max-width:44mm; max-height:20mm; filter:grayscale(1) contrast(2); margin:0 auto 4px; display:block; }
+  #receipt .name { font-size:16px; font-weight:700; }
+  #receipt hr { border:0; border-top:1px dashed #000; margin:6px 0; }
+  #receipt .row { display:flex; justify-content:space-between; gap:6px; }
+  #receipt .big { font-size:15px; font-weight:700; }
+  #receipt .small { font-size:11px; }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <form class="card" id="loginForm">
+    <h1>Kassa</h1>
+    <p>Ilovadagi <b>Do'kon → Web KDS</b> bo'limidan bir martalik kodni oling va shu yerga kiriting.</p>
+    <input id="code" placeholder="ABCD-2345" autocomplete="off" inputmode="latin" />
+    <button id="loginBtn" type="submit">Kirish</button>
+    <div id="loginErr"></div>
+  </form>
+</div>
+
+<div id="app">
+  <header>
+    <h1>Kassa</h1>
+    <span class="shop" id="shopName"></span>
+    <a href="./kitchen.html">Oshxona</a>
+    <button class="logout" id="logout">Chiqish</button>
+  </header>
+  <div id="bills"></div>
+</div>
+
+<div id="receipt"><div class="paper" id="paper"></div></div>
+
+<script type="module">
+import { Client, Account, Databases, Functions, Query, ID, Permission, Role }
+  from "https://cdn.jsdelivr.net/npm/appwrite@16/+esm";
+
+const ENDPOINT = "https://fra.cloud.appwrite.io/v1";
+const PROJECT  = "6a31294f001a2a57fbc2";
+const DB       = "6a142bb0000b642f77f1";
+const C_KITCHEN = "kitchen_orders";
+const C_SALES = "sales";
+const C_PRODUCTS = "products";
+const C_BIZ = "businesses";
+const FN_AUTH = "sms-otp";
+
+// Tickets the kitchen has finished with are still the cashier's problem until
+// they're paid — so the till shows everything that is still open.
+const OPEN = ["new", "preparing", "ready", "served"];
+
+const client = new Client().setEndpoint(ENDPOINT).setProject(PROJECT);
+const account = new Account(client);
+const db = new Databases(client);
+const fn = new Functions(client);
+
+const el = (id) => document.getElementById(id);
+const soum = (n) => Math.round(Number(n) || 0).toLocaleString("en-US").replace(/,/g, " ");
+const parseLines = (o) => { try { return o.lines ? JSON.parse(o.lines) : []; } catch { return []; } };
+const two = (n) => String(n).padStart(2, "0");
+const stamp = (d) => `${two(d.getDate())}.${two(d.getMonth()+1)}.${d.getFullYear()} ${two(d.getHours())}:${two(d.getMinutes())}`;
+
+let shop = null, ownerId = null, orders = [], products = [], busy = {};
+
+// ---- Auth: one-time code, same as the kitchen screen ----
+const ERRORS = {
+  bad_code: "Kod noto'g'ri yoki allaqachon ishlatilgan",
+  expired:  "Kod muddati tugagan — ilovadan yangi kod oling",
+};
+
+el("code").addEventListener("input", (e) => {
+  const raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+  e.target.value = raw.length > 4 ? raw.slice(0, 4) + "-" + raw.slice(4) : raw;
+});
+
+el("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = el("loginBtn"); btn.disabled = true; el("loginErr").textContent = "";
+  try {
+    const code = el("code").value.replace(/[^A-Z0-9]/gi, "");
+    if (code.length !== 8) throw { kds: "bad_code" };
+    const exec = await fn.createExecution(FN_AUTH, JSON.stringify({ action: "kds-claim", code }), false);
+    const r = JSON.parse(exec.responseBody || "{}");
+    if (!r.ok) throw { kds: r.error || "bad_code" };
+    try { await account.deleteSession("current"); } catch {}
+    await account.createSession(r.userId, r.secret);
+    if (r.shopId) localStorage.setItem("kds_shop", r.shopId);
+    await start();
+  } catch (err) {
+    el("loginErr").textContent = ERRORS[err && err.kds] || "Kirib bo'lmadi — qayta urinib ko'ring";
+  } finally { btn.disabled = false; }
+});
+
+el("logout").addEventListener("click", async () => {
+  try { await account.deleteSession("current"); } catch {}
+  localStorage.removeItem("kds_shop");
+  location.reload();
+});
+
+// ---- Data ----
+async function start() {
+  const me = await account.get();
+  ownerId = me.$id;
+
+  const res = await db.listDocuments(DB, C_BIZ, [Query.equal("ownerId", ownerId), Query.limit(50)]);
+  const shops = res.documents || [];
+  if (!shops.length) { el("loginErr").textContent = "Bu hisobda do'kon topilmadi"; return; }
+  const paired = localStorage.getItem("kds_shop");
+  shop = shops.find((s) => s.$id === paired) || shops[0];
+
+  el("login").style.display = "none";
+  el("app").style.display = "block";
+  el("shopName").textContent = shop.name || "";
+
+  products = (await db.listDocuments(DB, C_PRODUCTS, [
+    Query.equal("businessId", shop.$id), Query.limit(500),
+  ]).catch(() => ({ documents: [] }))).documents;
+
+  await loadOrders();
+  setInterval(loadOrders, 15000);
+  client.subscribe(
+    `databases.${DB}.collections.${C_KITCHEN}.documents`,
+    (ev) => { const d = ev.payload; if (d && d.shopId === shop.$id) loadOrders(); }
+  );
+}
+
+async function loadOrders() {
+  const res = await db.listDocuments(DB, C_KITCHEN, [
+    Query.equal("shopId", shop.$id),
+    Query.equal("status", OPEN),
+    Query.orderAsc("$createdAt"),
+    Query.limit(100),
+  ]).catch(() => ({ documents: [] }));
+  orders = res.documents || [];
+  render();
+}
+
+// A dine-in table's tickets merge into one bill; each takeaway stands alone.
+function bills() {
+  const map = new Map();
+  for (const o of orders) {
+    const key = o.takeaway ? `to:${o.$id}` : `tb:${o.tableNo || "?"}`;
+    const label = o.takeaway ? "Olib ketish" : (o.tableNo ? `Stol ${o.tableNo}` : "Stol —");
+    if (!map.has(key)) map.set(key, { key, label, list: [], lines: [], total: 0, at: o.$createdAt });
+    const b = map.get(key);
+    b.list.push(o);
+    b.total += Number(o.amount) || 0;
+    for (const l of parseLines(o)) b.lines.push(l);
+  }
+  return [...map.values()];
+}
+
+function render() {
+  const list = bills();
+  const wrap = el("bills");
+  if (!list.length) {
+    wrap.innerHTML = `<div class="empty">Ochiq hisob yo'q — hammasi to'langan.</div>`;
+    return;
+  }
+  wrap.innerHTML = list.map((b) => `
+    <div class="bill">
+      <h2>${b.label}</h2>
+      <div class="when">${stamp(new Date(b.at))}</div>
+      <ul class="items">
+        ${b.lines.map((l) => `
+          <li><span>${esc(l.name)} × ${l.qty}</span><span>${soum(l.qty * l.price)}</span></li>
+          ${l.note ? `<li class="note">${esc(l.note)}</li>` : ""}
+        `).join("")}
+      </ul>
+      <div class="total"><span>To'lov</span><b>${soum(b.total)}</b></div>
+      <button class="pay" data-key="${b.key}" ${busy[b.key] ? "disabled" : ""}>
+        ${busy[b.key] ? "..." : "To'landi · chek"}
+      </button>
+    </div>
+  `).join("");
+
+  wrap.querySelectorAll(".pay").forEach((btn) => {
+    btn.addEventListener("click", () => pay(list.find((b) => b.key === btn.dataset.key)));
+  });
+}
+
+const esc = (s) => String(s || "").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+
+// ---- Payment ----
+async function pay(b) {
+  if (!b || busy[b.key]) return;
+  busy[b.key] = true; render();
+  try {
+    for (const o of b.list) {
+      const lines = parseLines(o);
+      await db.createDocument(DB, C_SALES, ID.unique(), {
+        shopId: shop.$id,
+        ownerId: shop.ownerId,
+        cashierId: ownerId,
+        cashierName: "",
+        customerId: "",
+        amount: Math.round(o.amount || 0),
+        discountPercent: 0,
+        discountAmount: 0,
+        finalAmount: Math.round(o.amount || 0),
+        lines: lines.length ? JSON.stringify(lines) : "",
+        voided: false,
+      }, [Permission.read(Role.team(shop.$id))]);
+
+      await deductStock(lines);
+      await db.updateDocument(DB, C_KITCHEN, o.$id, { status: "paid" });
+    }
+    orders = orders.filter((o) => !b.list.some((x) => x.$id === o.$id));
+    printReceipt(b);
+  } catch (e) {
+    alert("To'lovni yozib bo'lmadi. Qayta urinib ko'ring.");
+    await loadOrders();
+  } finally {
+    busy[b.key] = false;
+    render();
+  }
+}
+
+// Same stock rules as the app: only tracked products move.
+async function deductStock(lines) {
+  for (const l of lines) {
+    const p = products.find((x) => x.$id === l.productId);
+    if (!p || !p.trackStock) continue;
+    const next = Math.max(0, Number(p.stock || 0) - Number(l.qty || 0));
+    try {
+      await db.updateDocument(DB, C_PRODUCTS, p.$id, { stock: next });
+      p.stock = next;
+    } catch {}
+  }
+}
+
+// ---- Receipt (browser → USB thermal printer) ----
+function printReceipt(b) {
+  const now = new Date();
+  const no = String(Date.now()).slice(-6);
+  el("paper").innerHTML = `
+    ${shop.logo ? `<img class="logo" src="${shop.logo}" />` : ""}
+    <div class="c name">${esc(shop.name)}</div>
+    ${shop.address ? `<div class="c small">${esc(shop.address)}</div>` : ""}
+    ${shop.phone ? `<div class="c small">${esc(shop.phone)}</div>` : ""}
+    <hr />
+    <div class="row"><span>${stamp(now)}</span><span>#${no}</span></div>
+    <div><b>${esc(b.label)}</b></div>
+    <hr />
+    ${b.lines.map((l) => `
+      <div>${esc(l.name)}</div>
+      <div class="row"><span>&nbsp;&nbsp;${l.qty} x ${soum(l.price)}</span><span>${soum(l.qty * l.price)}</span></div>
+      ${l.note ? `<div class="small">&nbsp;&nbsp;* ${esc(l.note)}</div>` : ""}
+    `).join("")}
+    <hr />
+    <div class="row big"><span>TO'LANDI</span><span>${soum(b.total)}</span></div>
+    <hr />
+    <div class="c small">Xaridingiz uchun rahmat!</div>
+    <div class="c small">xurmo.me</div>
+  `;
+  // The logo has to be on the page before the print dialog measures it.
+  const img = el("paper").querySelector("img");
+  if (img && !img.complete) {
+    img.onload = img.onerror = () => window.print();
+  } else {
+    window.print();
+  }
+}
+
+// A live session (paired earlier, or set on the kitchen screen) skips the code.
+account.get().then(start).catch(() => {
+  el("login").style.display = "grid";
+});
+</script>
+</body>
+</html>
