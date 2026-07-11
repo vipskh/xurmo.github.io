@@ -23,6 +23,7 @@
   .field{display:block;width:100%;background:#0e1116;border:1px solid var(--line);color:var(--text);
     border-radius:12px;padding:14px 16px;font-size:16px;margin-bottom:12px;outline:none}
   .field:focus{border-color:var(--teal)}
+  .field.code{text-align:center;font-size:26px;font-weight:700;letter-spacing:4px;padding:16px}
   .btn{width:100%;background:var(--teal);color:#fff;border-radius:999px;padding:14px;font-size:16px;font-weight:700}
   .btn:disabled{opacity:.5}
   .err{color:var(--new);font-size:13px;margin-top:8px;min-height:18px;text-align:center}
@@ -57,9 +58,9 @@
 <div id="login">
   <form class="card-login" id="loginForm">
     <h1>Oshxona ekrani</h1>
-    <p>Do'kon egasi telefon raqami va paroli bilan kiring.</p>
-    <input class="field" id="phone" inputmode="tel" placeholder="Telefon (998…)" autocomplete="username" />
-    <input class="field" id="password" type="password" placeholder="Parol" autocomplete="current-password" />
+    <p>Xurmo ilovasida: Do'kon → Web KDS → <b>Kod olish</b>. Kodni shu yerga kiriting.</p>
+    <input class="field code" id="code" placeholder="ABCD-2345" autocomplete="off"
+           autocapitalize="characters" spellcheck="false" maxlength="9" />
     <button class="btn" id="loginBtn" type="submit">Kirish</button>
     <div class="err" id="loginErr"></div>
   </form>
@@ -78,7 +79,7 @@
 </div>
 
 <script type="module">
-import { Client, Account, Databases, Query }
+import { Client, Account, Databases, Functions, Query }
   from "https://cdn.jsdelivr.net/npm/appwrite@16/+esm";
 
 const ENDPOINT = "https://fra.cloud.appwrite.io/v1";
@@ -86,6 +87,7 @@ const PROJECT  = "6a31294f001a2a57fbc2";
 const DB       = "6a142bb0000b642f77f1";
 const C_KITCHEN = "kitchen_orders";
 const C_BIZ = "businesses";
+const FN_AUTH = "sms-otp";
 // The kitchen only shows tickets that still need cooking. The cook taps "Tayyor"
 // (ready) and it leaves the screen; payment is the cashier's job, not here.
 const COOKING = ["new","preparing"];
@@ -99,7 +101,7 @@ const waitColor = (iso) => {
 const client = new Client().setEndpoint(ENDPOINT).setProject(PROJECT);
 const account = new Account(client);
 const db = new Databases(client);
-const phoneToEmail = (p) => `${(p||"").replace(/\D/g,"")}@xurmomercato.uz`;
+const fn = new Functions(client);
 const parseLines = (o) => { try { return o.lines ? JSON.parse(o.lines) : []; } catch { return []; } };
 const ago = (iso) => {
   const m = Math.max(0, Math.round((Date.now()-new Date(iso).getTime())/60000));
@@ -110,20 +112,43 @@ const el = (id) => document.getElementById(id);
 let shops = [], shopId = null, ownerId = null, orders = [], unsub = null;
 
 // ---- Auth ----
+// No password: the owner gets a one-time code in the app, we trade it for a
+// session token on the server. Owners sign into the app with Telegram/Google,
+// so many of them have neither a password nor a phone number on the account.
+const ERRORS = {
+  bad_code: "Kod noto'g'ri yoki allaqachon ishlatilgan",
+  expired:  "Kod muddati tugagan — ilovadan yangi kod oling",
+};
+
+el("code").addEventListener("input", (e) => {
+  // Type "abcd2345" → shows "ABCD-2345".
+  const raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+  e.target.value = raw.length > 4 ? raw.slice(0, 4) + "-" + raw.slice(4) : raw;
+});
+
 el("loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const btn = el("loginBtn"); btn.disabled = true; el("loginErr").textContent = "";
   try {
+    const code = el("code").value.replace(/[^A-Z0-9]/gi, "");
+    if (code.length !== 8) throw { kds: "bad_code" };
+
+    const exec = await fn.createExecution(FN_AUTH, JSON.stringify({ action: "kds-claim", code }), false);
+    const r = JSON.parse(exec.responseBody || "{}");
+    if (!r.ok) throw { kds: r.error || "bad_code" };
+
     try { await account.deleteSession("current"); } catch {}
-    await account.createEmailPasswordSession(phoneToEmail(el("phone").value), el("password").value);
+    await account.createSession(r.userId, r.secret);
+    if (r.shopId) localStorage.setItem("kds_shop", r.shopId);
     await start();
   } catch (err) {
-    el("loginErr").textContent = "Telefon yoki parol xato";
+    el("loginErr").textContent = ERRORS[err && err.kds] || "Kirib bo'lmadi — qayta urinib ko'ring";
   } finally { btn.disabled = false; }
 });
 
 el("logout").addEventListener("click", async () => {
   try { await account.deleteSession("current"); } catch {}
+  localStorage.removeItem("kds_shop");
   if (unsub) unsub();
   location.reload();
 });
@@ -148,7 +173,13 @@ async function start() {
     sel.innerHTML = shops.map(s => `<option value="${s.$id}">${s.name}</option>`).join("");
   }
   subscribe();
-  selectShop(shops[0].$id);
+
+  // The code was minted for one specific shop — open that one (an owner with
+  // several restaurants pairs each kitchen screen to its own).
+  const paired = localStorage.getItem("kds_shop");
+  const pick = shops.find(s => s.$id === paired) || shops[0];
+  if (shops.length > 1) sel.value = pick.$id;
+  selectShop(pick.$id);
 }
 
 function selectShop(id) {
