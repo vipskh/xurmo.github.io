@@ -84,27 +84,28 @@
 </div>
 
 <script type="module">
-import { Client, Account, Databases, Query, ID, Permission, Role }
+import { Client, Account, Databases, Query }
   from "https://cdn.jsdelivr.net/npm/appwrite@16/+esm";
 
 const ENDPOINT = "https://fra.cloud.appwrite.io/v1";
 const PROJECT  = "6a31294f001a2a57fbc2";
 const DB       = "6a142bb0000b642f77f1";
 const C_KITCHEN = "kitchen_orders";
-const C_BIZ = "businesses", C_SALES = "sales", C_PROD = "products";
-const ACTIVE = ["new","preparing","ready","served"];
-const FLOW = {
-  new:      {label:"Boshlash", next:"preparing"},
-  preparing:{label:"Tayyor",   next:"ready"},
-  ready:    {label:"Berildi",  next:"served"},
-  served:   {label:"Berilgan", next:null},
+const C_BIZ = "businesses";
+// The kitchen only shows tickets that still need cooking. The cook taps "Tayyor"
+// (ready) and it leaves the screen; payment is the cashier's job, not here.
+const COOKING = ["new","preparing"];
+const waitColor = (iso) => {
+  const m = (Date.now() - new Date(iso).getTime()) / 60000;
+  if (m >= 12) return "#E5484D";
+  if (m >= 6)  return "#F5A623";
+  return "#1FA463";
 };
 
 const client = new Client().setEndpoint(ENDPOINT).setProject(PROJECT);
 const account = new Account(client);
 const db = new Databases(client);
 const phoneToEmail = (p) => `${(p||"").replace(/\D/g,"")}@xurmomercato.uz`;
-const soum = (n) => Number(n||0).toLocaleString("en-US").replace(/,/g," ");
 const parseLines = (o) => { try { return o.lines ? JSON.parse(o.lines) : []; } catch { return []; } };
 const ago = (iso) => {
   const m = Math.max(0, Math.round((Date.now()-new Date(iso).getTime())/60000));
@@ -112,7 +113,7 @@ const ago = (iso) => {
 };
 
 const el = (id) => document.getElementById(id);
-let shops = [], shopId = null, ownerId = null, orders = [], prodCache = null, unsub = null, hidePrices = false;
+let shops = [], shopId = null, ownerId = null, orders = [], unsub = null;
 
 // ---- Auth ----
 el("loginForm").addEventListener("submit", async (e) => {
@@ -157,10 +158,9 @@ async function start() {
 }
 
 function selectShop(id) {
-  shopId = id; prodCache = null;
+  shopId = id;
   const s = shops.find(x => x.$id === id);
   el("shopName").textContent = s ? s.name : "";
-  hidePrices = !!(s && s.hideStaffPrices); // owner hid money from kitchen staff
   loadOrders();
 }
 
@@ -177,7 +177,7 @@ async function loadOrders() {
   try {
     const res = await db.listDocuments(DB, C_KITCHEN, [
       Query.equal("shopId", id),
-      Query.equal("status", ACTIVE),
+      Query.equal("status", COOKING),
       Query.orderAsc("$createdAt"),
       Query.limit(100),
     ]);
@@ -195,21 +195,20 @@ function render() {
   const grid = el("grid");
   if (!orders.length) { grid.innerHTML = `<div class="empty">Faol buyurtma yo'q</div>`; return; }
   grid.innerHTML = orders.map(o => {
-    const st = o.status; const flow = FLOW[st] || FLOW.served;
+    const color = waitColor(o.$createdAt);
     const lines = parseLines(o);
-    const items = lines.map(l => `<div class="row"><span>${escapeHtml(l.name)}</span><span class="q">×${l.qty}</span></div>`).join("");
-    const advance = flow.next
-      ? `<button class="act" style="background:var(--${st==='new'?'new':st==='preparing'?'prep':'ready'})" data-adv="${o.$id}">${flow.label}</button>` : "";
-    return `<div class="ticket ${st}">
+    const items = lines.map(l =>
+      `<div class="row"><span>${escapeHtml(l.name)}${l.note ? ` <em>· ${escapeHtml(l.note)}</em>` : ""}</span><span class="q">×${l.qty}</span></div>`
+    ).join("");
+    const head = o.takeaway ? "🛍️ Olib ketish" : (o.tableNo ? escapeHtml(o.tableNo) : "Stolsiz");
+    return `<div class="ticket" style="border-color:${color}">
       <div class="thead">
-        <span class="table">${o.tableNo ? escapeHtml(o.tableNo) : "Stolsiz"}</span>
+        <span class="table" style="background:${color}22;color:${color}">${head}</span>
         <button class="x" data-void="${o.$id}">×</button>
       </div>
       <div class="time">${ago(o.$createdAt)}</div>
       <div class="items">${items}</div>
-      ${hidePrices ? "" : `<div class="total">${soum(o.amount)} so'm</div>`}
-      ${advance}
-      ${hidePrices ? "" : `<button class="act pay" data-pay="${o.$id}">To'lov</button>`}
+      <button class="act" style="background:#1FA463" data-ready="${o.$id}">✓ Tayyor</button>
     </div>`;
   }).join("");
 }
@@ -218,60 +217,22 @@ function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","
 
 // ---- Actions (event delegation) ----
 el("grid").addEventListener("click", async (e) => {
-  const adv = e.target.closest("[data-adv]");
-  const pay = e.target.closest("[data-pay]");
-  const vd  = e.target.closest("[data-void]");
-  if (adv) return advance(adv.dataset.adv);
-  if (pay) return payOrder(pay.dataset.pay);
-  if (vd)  return voidOrder(vd.dataset.void);
+  const rd = e.target.closest("[data-ready]");
+  const vd = e.target.closest("[data-void]");
+  if (rd) return markReady(rd.dataset.ready);
+  if (vd) return voidOrder(vd.dataset.void);
 });
 
-async function advance(id) {
-  const o = orders.find(x => x.$id === id); if (!o) return;
-  const next = (FLOW[o.status]||{}).next; if (!next) return;
-  o.status = next; render();
-  try { await db.updateDocument(DB, C_KITCHEN, id, { status: next }); } catch { loadOrders(); }
+// Cook marks a ticket cooked → it leaves the kitchen (cashier still settles it).
+async function markReady(id) {
+  orders = orders.filter(x => x.$id !== id); render();
+  try { await db.updateDocument(DB, C_KITCHEN, id, { status: "ready" }); } catch { loadOrders(); }
 }
 
 async function voidOrder(id) {
   if (!confirm("Buyurtma bekor qilinsinmi?")) return;
   orders = orders.filter(x => x.$id !== id); render();
   try { await db.updateDocument(DB, C_KITCHEN, id, { status: "void" }); } catch { loadOrders(); }
-}
-
-async function products() {
-  if (prodCache) return prodCache;
-  try {
-    const r = await db.listDocuments(DB, C_PROD, [Query.equal("businessId", shopId), Query.limit(500)]);
-    prodCache = r.documents;
-  } catch { prodCache = []; }
-  return prodCache;
-}
-
-async function payOrder(id) {
-  const o = orders.find(x => x.$id === id); if (!o) return;
-  if (!confirm(`Hisobni yopamizmi?\n${o.tableNo ? o.tableNo+" · " : ""}${soum(o.amount)} so'm`)) return;
-  const lines = parseLines(o);
-  try {
-    // 1) record the sale (revenue)
-    await db.createDocument(DB, C_SALES, ID.unique(), {
-      shopId: o.shopId, ownerId, cashierId: o.cashierId||"", cashierName: o.cashierName||"",
-      customerId: "", amount: o.amount, discountPercent: 0, discountAmount: 0,
-      finalAmount: o.amount, voided: false, lines: o.lines || "[]",
-    }, [Permission.read(Role.user(ownerId)), Permission.update(Role.user(ownerId)), Permission.delete(Role.user(ownerId))]);
-    // 2) deduct tracked stock (best-effort, mirrors the mobile app)
-    const prods = await products();
-    for (const l of lines) {
-      const p = prods.find(x => x.$id === l.productId);
-      if (p && p.trackStock) {
-        const next = Math.max(0, Number(p.stock||0) - Number(l.qty||0));
-        try { await db.updateDocument(DB, C_PROD, p.$id, { stock: next }); p.stock = next; } catch {}
-      }
-    }
-    // 3) close the ticket
-    await db.updateDocument(DB, C_KITCHEN, id, { status: "paid" });
-    orders = orders.filter(x => x.$id !== id); render();
-  } catch (e) { console.error(e); alert("Xatolik. Qayta urinib ko'ring."); loadOrders(); }
 }
 
 // ---- Auto-login if a session already exists (kitchen PC stays signed in) ----
