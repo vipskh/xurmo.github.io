@@ -56,6 +56,15 @@
   .sheet h2 { margin:0 0 12px; font-size:18px; }
   .cline { display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); font-size:14px; }
   .cline .n { color:var(--muted); font-size:12px; font-style:italic; }
+  /* Eat in / take away — the one question the kitchen can't guess. */
+  .modes { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
+  .mode { border:2px solid var(--line); border-radius:16px; padding:14px 10px; text-align:center; cursor:pointer;
+          background:#fff; transition:border-color .12s, background .12s; }
+  .mode.on { border-color:var(--teal); background:#FDF3F0; }
+  .mode .ic { font-size:26px; line-height:1; }
+  .mode b { display:block; margin-top:6px; font-size:14px; }
+  .mode span { display:block; font-size:11px; color:var(--muted); margin-top:2px; }
+
   textarea { width:100%; margin-top:12px; padding:12px; border:1px solid var(--line); border-radius:12px; font:inherit; font-size:14px; resize:none; }
   .send { width:100%; margin-top:14px; padding:15px; border:0; border-radius:14px; background:var(--teal); color:#fff;
           font-size:16px; font-weight:700; cursor:pointer; }
@@ -234,23 +243,51 @@ function renderBar() {
 
 el("openCart").addEventListener("click", openCart);
 
+// Eat in, or take it away? The kitchen packs a takeaway differently and no
+// waiter carries it anywhere — so the diner says which before the order goes in.
+// A QR on table 5 already knows the answer, so it starts on "here".
+let mode = tableNo ? "in" : "";
+
 function openCart() {
-  // Without a table number an order has nowhere to be carried to.
-  const needTable = !tableNo;
   el("cartBody").innerHTML = `
-    <h2>Buyurtma${tableNo ? ` · Stol ${esc(tableNo)}` : ""}</h2>
+    <h2>Buyurtma</h2>
     ${cartLines().map((l) => `
       <div class="cline">
         <span>${esc(l.p.name)} × ${l.qty}</span>
         <span>${soum(price(l.p) * l.qty)}</span>
       </div>`).join("")}
     <div class="cline"><b>Jami</b><b>${soum(cartSum())} so'm</b></div>
-    ${needTable ? `<textarea id="tbl" rows="1" placeholder="Stol raqami"></textarea>` : ""}
+
+    <div class="modes">
+      <div class="mode ${mode === "in" ? "on" : ""}" data-m="in">
+        <div class="ic">🍽</div>
+        <b>Restoranda</b>
+        <span>Shu yerda yeyman</span>
+      </div>
+      <div class="mode ${mode === "out" ? "on" : ""}" data-m="out">
+        <div class="ic">🛍</div>
+        <b>Olib ketish</b>
+        <span>O'zim olib ketaman</span>
+      </div>
+    </div>
+
+    <div id="tblWrap" ${mode === "in" ? "" : "hidden"}>
+      <textarea id="tbl" rows="1" placeholder="Stol raqami">${esc(tableNo)}</textarea>
+    </div>
     <textarea id="note" rows="2" placeholder="Izoh (masalan: achchiq bo'lmasin)"></textarea>
-    <button class="send" id="send">Oshxonaga yuborish</button>
+    <button class="send" id="send">Buyurtma berish</button>
     <button class="close" id="closeCart">Yopish</button>
     <div class="err" id="cartErr"></div>
   `;
+
+  el("cartBody").querySelectorAll(".mode").forEach((m) =>
+    m.addEventListener("click", () => {
+      mode = m.dataset.m;
+      el("cartBody").querySelectorAll(".mode").forEach((x) => x.classList.toggle("on", x.dataset.m === mode));
+      el("tblWrap").hidden = mode !== "in";
+      el("cartErr").textContent = "";
+    })
+  );
   el("closeCart").addEventListener("click", () => el("cart").close());
   el("send").addEventListener("click", send);
   el("cart").showModal();
@@ -265,9 +302,11 @@ const ERRORS = {
 
 async function send() {
   const btn = el("send");
-  const table = tableNo || (el("tbl")?.value || "").trim();
+  if (!mode) { el("cartErr").textContent = "Restoranda yeysizmi yoki olib ketasizmi?"; return; }
+  const takeaway = mode === "out";
+  const table = takeaway ? "" : (el("tbl")?.value || "").trim();
   const note = (el("note")?.value || "").trim();
-  if (!table) { el("cartErr").textContent = "Stol raqamini kiriting."; return; }
+  if (!takeaway && !table) { el("cartErr").textContent = "Stol raqamini kiriting."; return; }
 
   btn.disabled = true;
   el("cartErr").textContent = "";
@@ -280,7 +319,7 @@ async function send() {
     }));
     const exec = await fn.createExecution(
       FN,
-      JSON.stringify({ action: "table-order", shopId, tableNo: table, items }),
+      JSON.stringify({ action: "table-order", shopId, tableNo: table, takeaway, items }),
       false
     );
     const r = JSON.parse(exec.responseBody || "{}");
@@ -291,7 +330,9 @@ async function send() {
       <div class="ok">
         <div class="big">✅</div>
         <h2>Buyurtma qabul qilindi</h2>
-        <p>Oshxonaga yuborildi. Ofitsiant tez orada keladi.</p>
+        <p>${takeaway
+          ? "Tayyor bo'lganda olib ketasiz. To'lov kassada."
+          : `Oshxonaga yuborildi. Ofitsiant ${esc(table)}-stolga keladi.`}</p>
         <button class="close" id="closeCart2">Yopish</button>
       </div>`;
     el("closeCart2").addEventListener("click", () => { el("cart").close(); render(); });
