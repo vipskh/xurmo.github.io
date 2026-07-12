@@ -35,6 +35,13 @@
   #qr { flex:1; max-width:420px; padding:10px 14px; border:1px solid var(--line); border-radius:12px; font-size:14px; }
   #discState { font-size:14px; font-weight:700; color:var(--teal); }
 
+  #tip { display:none; align-items:center; gap:12px; margin:14px 20px 0; padding:10px 14px; border-radius:12px;
+         background:#FFF8E6; border:1px solid #F0DFAE; font-size:13px; color:#6B5A2B; }
+  #tip code { background:#fff; border:1px solid #E7DDBF; border-radius:6px; padding:1px 6px; font-size:12px; }
+  #tip button { margin-left:auto; background:none; color:#8a7a48; font-size:14px; }
+  #lastWrap { display:none; margin:12px 20px 0; }
+  #reprint { background:#fff; border:1px solid var(--line); border-radius:12px; padding:9px 14px; font-size:13px; color:var(--ink); }
+
   #bills { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; padding:20px; }
   .bill .disc { display:flex; justify-content:space-between; font-size:13px; color:var(--teal); font-weight:700; padding-top:4px; }
   .bill { background:#fff; border-radius:16px; padding:16px; box-shadow:0 2px 10px rgba(0,0,0,.05); display:flex; flex-direction:column; }
@@ -95,6 +102,17 @@
   <div id="disc">
     <input id="qr" placeholder="Mijoz QR — skanerlang yoki joylashtiring" autocomplete="off" />
     <span id="discState"></span>
+  </div>
+
+  <!-- The receipt goes through the browser's print dialog, which a busy till
+       does not want to click through every time. Chrome's kiosk-printing flag
+       removes it — so tell them how, once, instead of leaving them to guess. -->
+  <div id="tip">
+    <span>🖨 Chek har safar so'ramasdan chiqsin: Chrome yorlig'iga <code>--kiosk-printing</code> qo'shing va printerni asosiy qilib qo'ying (58 mm).</span>
+    <button id="tipX">✕</button>
+  </div>
+  <div id="lastWrap">
+    <button id="reprint">↻ Oxirgi chekni qayta chop etish</button>
   </div>
 
   <div id="bills"></div>
@@ -223,6 +241,7 @@ async function start() {
   el("login").style.display = "none";
   el("app").style.display = "block";
   el("shopName").textContent = shop.name || "";
+  if (localStorage.getItem("kassa_tip") !== "off") el("tip").style.display = "flex";
 
   // Only a shop that actually gives a discount needs the QR box.
   if ((Number(shop.discountPercent) || 0) > 0) {
@@ -366,7 +385,22 @@ async function deductStock(lines) {
 }
 
 // ---- Receipt (browser → USB thermal printer) ----
+// Paper jammed, ran out, the printer was off — the money is already recorded, so
+// the cashier needs the receipt back without re-taking the payment.
+let lastReceipt = null;
+
+el("reprint").addEventListener("click", () => {
+  if (lastReceipt) printReceipt(...lastReceipt);
+});
+el("tipX").addEventListener("click", () => {
+  el("tip").style.display = "none";
+  localStorage.setItem("kassa_tip", "off");
+});
+
 function printReceipt(b, pct = 0, off = 0, due = b.total) {
+  lastReceipt = [b, pct, off, due];
+  el("lastWrap").style.display = "block";
+
   const now = new Date();
   const no = String(Date.now()).slice(-6);
   el("paper").innerHTML = `
