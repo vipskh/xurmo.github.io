@@ -35,10 +35,13 @@
   #qr { flex:1; max-width:420px; padding:10px 14px; border:1px solid var(--line); border-radius:12px; font-size:14px; }
   #discState { font-size:14px; font-weight:700; color:var(--teal); }
 
-  #tip { display:none; align-items:center; gap:12px; margin:14px 20px 0; padding:10px 14px; border-radius:12px;
-         background:#FFF8E6; border:1px solid #F0DFAE; font-size:13px; color:#6B5A2B; }
-  #tip code { background:#fff; border:1px solid #E7DDBF; border-radius:6px; padding:1px 6px; font-size:12px; }
-  #tip button { margin-left:auto; background:none; color:#8a7a48; font-size:14px; }
+  #tip { display:none; align-items:flex-start; gap:12px; margin:14px 20px 0; padding:12px 14px; border-radius:12px;
+         background:#FFF8E6; border:1px solid #F0DFAE; font-size:13px; color:#6B5A2B; line-height:1.6; }
+  #tip code { display:block; margin:6px 0; background:#fff; border:1px solid #E7DDBF; border-radius:8px;
+              padding:8px 10px; font-size:12px; color:#3d3520; overflow-x:auto; white-space:nowrap; }
+  #copyCmd { background:#fff; border:1px solid #E7DDBF; border-radius:8px; padding:5px 12px; font-size:12px;
+             color:#6B5A2B; cursor:pointer; }
+  #tipX { margin-left:auto; background:none; color:#8a7a48; font-size:16px; flex:0 0 auto; }
   #lastWrap { display:none; margin:12px 20px 0; }
   #reprint { background:#fff; border:1px solid var(--line); border-radius:12px; padding:9px 14px; font-size:13px; color:var(--ink); }
 
@@ -108,7 +111,14 @@
        does not want to click through every time. Chrome's kiosk-printing flag
        removes it — so tell them how, once, instead of leaving them to guess. -->
   <div id="tip">
-    <span>🖨 Chek har safar so'ramasdan chiqsin: Chrome yorlig'iga <code>--kiosk-printing</code> qo'shing va printerni asosiy qilib qo'ying (58 mm).</span>
+    <div>
+      <b>🖨 Chek o'zi chiqsin (bir marta sozlanadi)</b><br />
+      Ish stolida Chrome yorlig'i yarating va <b>Obyekt (Target)</b> qatoriga shuni qo'ying:
+      <code id="cmd">"C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk-printing --app=https://xurmo.me/kassa.html</code>
+      <button id="copyCmd">Nusxa olish</button><br />
+      Printer Windows'da <b>asosiy</b> bo'lsin, qog'oz <b>58 mm</b>. Shundan keyin "To'landi" bosilishi bilan chek
+      so'ramasdan chiqadi, brauzer paneli ham ko'rinmaydi.
+    </div>
     <button id="tipX">✕</button>
   </div>
   <div id="lastWrap">
@@ -395,6 +405,24 @@ el("reprint").addEventListener("click", () => {
 el("tipX").addEventListener("click", () => {
   el("tip").style.display = "none";
   localStorage.setItem("kassa_tip", "off");
+});
+
+el("copyCmd").addEventListener("click", async () => {
+  const btn = el("copyCmd");
+  try {
+    await navigator.clipboard.writeText(el("cmd").textContent.trim());
+    btn.textContent = "Nusxa olindi ✓";
+  } catch {
+    // Clipboard blocked (older browser, no permission) — select it instead, so
+    // the cashier can still Ctrl+C rather than retype a path by hand.
+    const r = document.createRange();
+    r.selectNodeContents(el("cmd"));
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(r);
+    btn.textContent = "Ctrl+C bosing";
+  }
+  setTimeout(() => (btn.textContent = "Nusxa olish"), 2500);
 });
 
 function printReceipt(b, pct = 0, off = 0, due = b.total) {
