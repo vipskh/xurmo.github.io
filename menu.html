@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Menyu — Xurmo</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽</text></svg>" />
+<style>
+  :root { --teal:#DA7452; --ink:#191D31; --muted:#8C8E98; --line:#E7E9F0; --bg:#F7F7F9; --green:#1FA463; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--ink);
+         padding-bottom:96px; }
+
+  header { background:#fff; padding:16px 20px; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:10; }
+  .top { display:flex; align-items:center; gap:12px; }
+  .logo { width:44px; height:44px; border-radius:12px; object-fit:cover; }
+  h1 { margin:0; font-size:19px; }
+  .table { color:var(--muted); font-size:13px; }
+  .cats { display:flex; gap:8px; overflow-x:auto; margin-top:12px; padding-bottom:2px; scrollbar-width:none; }
+  .cats::-webkit-scrollbar { display:none; }
+  .cat { flex:0 0 auto; padding:7px 14px; border-radius:999px; border:1px solid var(--line); background:#fff;
+         font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
+  .cat.on { background:var(--teal); color:#fff; border-color:var(--teal); }
+
+  .banner { margin:12px 20px 0; background:#fff; border:1px dashed var(--teal); border-radius:14px; padding:12px 14px;
+            font-size:13px; color:var(--ink); }
+  .banner b { color:var(--teal); }
+
+  #list { padding:12px 20px 20px; display:grid; gap:12px; }
+  .sec { font-size:13px; font-weight:700; color:var(--muted); margin-top:8px; text-transform:uppercase; letter-spacing:.4px; }
+  .item { background:#fff; border-radius:16px; padding:12px; display:flex; gap:12px; align-items:center;
+          box-shadow:0 1px 6px rgba(0,0,0,.04); }
+  .item img { width:72px; height:72px; border-radius:12px; object-fit:cover; flex:0 0 auto; background:var(--bg); }
+  .item .body { flex:1; min-width:0; }
+  .item h3 { margin:0 0 2px; font-size:15px; }
+  .item p { margin:0; font-size:12px; color:var(--muted); overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .price { font-weight:700; margin-top:4px; display:block; }
+  .old { color:var(--muted); text-decoration:line-through; font-weight:400; font-size:12px; margin-left:6px; }
+  .add { border:0; background:var(--teal); color:#fff; width:36px; height:36px; border-radius:50%; font-size:20px;
+         cursor:pointer; flex:0 0 auto; }
+  .qty { display:flex; align-items:center; gap:10px; flex:0 0 auto; }
+  .qty button { width:32px; height:32px; border-radius:50%; border:1px solid var(--line); background:#fff; font-size:18px; cursor:pointer; }
+  .qty b { min-width:18px; text-align:center; }
+
+  /* Cart */
+  #bar { position:fixed; left:0; right:0; bottom:0; padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+         background:#fff; border-top:1px solid var(--line); display:none; }
+  #bar button { width:100%; padding:15px; border:0; border-radius:14px; background:var(--green); color:#fff;
+                font-size:16px; font-weight:700; cursor:pointer; display:flex; justify-content:space-between; }
+  #bar button:disabled { opacity:.6; }
+
+  dialog { border:0; border-radius:20px 20px 0 0; padding:0; width:100%; max-width:520px; margin:auto auto 0;
+           background:#fff; }
+  dialog::backdrop { background:rgba(0,0,0,.45); }
+  .sheet { padding:20px; }
+  .sheet h2 { margin:0 0 12px; font-size:18px; }
+  .cline { display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); font-size:14px; }
+  .cline .n { color:var(--muted); font-size:12px; font-style:italic; }
+  textarea { width:100%; margin-top:12px; padding:12px; border:1px solid var(--line); border-radius:12px; font:inherit; font-size:14px; resize:none; }
+  .send { width:100%; margin-top:14px; padding:15px; border:0; border-radius:14px; background:var(--teal); color:#fff;
+          font-size:16px; font-weight:700; cursor:pointer; }
+  .send:disabled { opacity:.6; }
+  .close { width:100%; margin-top:8px; padding:12px; border:0; border-radius:14px; background:var(--bg); color:var(--ink);
+           font-size:14px; cursor:pointer; }
+  .ok { text-align:center; padding:36px 20px; }
+  .ok .big { font-size:44px; }
+  .ok h2 { margin:12px 0 6px; }
+  .ok p { color:var(--muted); margin:0; font-size:14px; }
+  .err { color:#E5484D; font-size:13px; margin-top:10px; text-align:center; min-height:18px; }
+  .empty { padding:60px 20px; text-align:center; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="top">
+    <img class="logo" id="logo" alt="" hidden />
+    <div>
+      <h1 id="shopName">…</h1>
+      <div class="table" id="tableLbl"></div>
+    </div>
+  </div>
+  <div class="cats" id="cats"></div>
+</header>
+
+<div class="banner" id="promo" hidden></div>
+<div id="list"><div class="empty">Menyu yuklanmoqda…</div></div>
+
+<div id="bar">
+  <button id="openCart">
+    <span id="cartCount">0 ta</span>
+    <span id="cartSum">0</span>
+  </button>
+</div>
+
+<dialog id="cart">
+  <div class="sheet" id="cartBody"></div>
+</dialog>
+
+<script type="module">
+import { Client, Databases, Functions, Query }
+  from "https://cdn.jsdelivr.net/npm/appwrite@16/+esm";
+
+const ENDPOINT = "https://fra.cloud.appwrite.io/v1";
+const PROJECT  = "6a31294f001a2a57fbc2";
+const DB       = "6a142bb0000b642f77f1";
+const C_BIZ = "businesses";
+const C_PRODUCTS = "products";
+const FN = "sms-otp";
+
+const client = new Client().setEndpoint(ENDPOINT).setProject(PROJECT);
+const db = new Databases(client);
+const fn = new Functions(client);
+
+const qs = new URLSearchParams(location.search);
+const shopId = qs.get("shop") || "";
+const tableNo = (qs.get("stol") || qs.get("table") || "").trim();
+
+const el = (id) => document.getElementById(id);
+const soum = (n) => Math.round(Number(n) || 0).toLocaleString("en-US").replace(/,/g, " ");
+const esc = (s) => String(s || "").replace(/[<>&"]/g, (c) => ({ "<":"&lt;", ">":"&gt;", "&":"&amp;", '"':"&quot;" }[c]));
+
+let shop = null, products = [], cart = {}, cat = "";
+
+const price = (p) =>
+  p.hasDiscount && Number(p.discountPrice) > 0 ? Number(p.discountPrice) : Number(p.price) || 0;
+
+async function boot() {
+  if (!shopId) { el("list").innerHTML = `<div class="empty">Havola noto'g'ri.</div>`; return; }
+  try {
+    shop = await db.getDocument(DB, C_BIZ, shopId);
+  } catch {
+    el("list").innerHTML = `<div class="empty">Do'kon topilmadi.</div>`;
+    return;
+  }
+
+  el("shopName").textContent = shop.name || "";
+  document.title = `${shop.name} — Menyu`;
+  if (shop.logo) { el("logo").src = shop.logo; el("logo").hidden = false; }
+  el("tableLbl").textContent = tableNo ? `Stol ${tableNo}` : "";
+
+  // The app's whole pitch to a diner, right where they're deciding.
+  if (Number(shop.discountPercent) > 0) {
+    el("promo").innerHTML =
+      `Xurmo ilovasi bilan bu yerda <b>−${shop.discountPercent}%</b> chegirma. To'lovda QR kodingizni ko'rsating.`;
+    el("promo").hidden = false;
+  }
+
+  const res = await db.listDocuments(DB, C_PRODUCTS, [
+    Query.equal("businessId", shopId),
+    Query.limit(300),
+  ]).catch(() => ({ documents: [] }));
+  products = (res.documents || []).filter((p) => p.kind !== "service");
+
+  if (!products.length) {
+    el("list").innerHTML = `<div class="empty">Menyu hali to'ldirilmagan.</div>`;
+    return;
+  }
+  renderCats();
+  render();
+}
+
+const sections = () => {
+  const seen = [];
+  for (const p of products) {
+    const s = String(p.section || "").trim();
+    if (s && !seen.includes(s)) seen.push(s);
+  }
+  return seen;
+};
+
+function renderCats() {
+  const secs = sections();
+  if (!secs.length) return;
+  el("cats").innerHTML =
+    [`<div class="cat ${cat === "" ? "on" : ""}" data-c="">Hammasi</div>`]
+      .concat(secs.map((s) => `<div class="cat ${cat === s ? "on" : ""}" data-c="${esc(s)}">${esc(s)}</div>`))
+      .join("");
+  el("cats").querySelectorAll(".cat").forEach((c) =>
+    c.addEventListener("click", () => { cat = c.dataset.c; renderCats(); render(); })
+  );
+}
+
+function render() {
+  const list = cat ? products.filter((p) => String(p.section || "").trim() === cat) : products;
+  el("list").innerHTML = list.map((p) => {
+    const q = cart[p.$id]?.qty || 0;
+    const img = p.image || (p.images && p.images[0]) || "";
+    const disc = p.hasDiscount && Number(p.discountPrice) > 0;
+    return `
+      <div class="item">
+        ${img ? `<img src="${esc(img)}" alt="" loading="lazy" />` : ""}
+        <div class="body">
+          <h3>${esc(p.name)}</h3>
+          ${p.description ? `<p>${esc(p.description)}</p>` : ""}
+          <span class="price">${soum(price(p))} so'm${disc ? `<span class="old">${soum(p.price)}</span>` : ""}</span>
+        </div>
+        ${q > 0
+          ? `<div class="qty">
+               <button data-minus="${p.$id}">−</button><b>${q}</b><button data-plus="${p.$id}">+</button>
+             </div>`
+          : `<button class="add" data-plus="${p.$id}">+</button>`}
+      </div>`;
+  }).join("");
+
+  el("list").querySelectorAll("[data-plus]").forEach((b) =>
+    b.addEventListener("click", () => bump(b.dataset.plus, +1))
+  );
+  el("list").querySelectorAll("[data-minus]").forEach((b) =>
+    b.addEventListener("click", () => bump(b.dataset.minus, -1))
+  );
+  renderBar();
+}
+
+function bump(id, by) {
+  const p = products.find((x) => x.$id === id);
+  if (!p) return;
+  const q = (cart[id]?.qty || 0) + by;
+  if (q <= 0) delete cart[id];
+  else cart[id] = { p, qty: q };
+  render();
+}
+
+const cartLines = () => Object.values(cart);
+const cartSum = () => cartLines().reduce((s, l) => s + price(l.p) * l.qty, 0);
+const cartCount = () => cartLines().reduce((s, l) => s + l.qty, 0);
+
+function renderBar() {
+  const n = cartCount();
+  el("bar").style.display = n ? "block" : "none";
+  el("cartCount").textContent = `${n} ta`;
+  el("cartSum").textContent = `${soum(cartSum())} so'm`;
+}
+
+el("openCart").addEventListener("click", openCart);
+
+function openCart() {
+  // Without a table number an order has nowhere to be carried to.
+  const needTable = !tableNo;
+  el("cartBody").innerHTML = `
+    <h2>Buyurtma${tableNo ? ` · Stol ${esc(tableNo)}` : ""}</h2>
+    ${cartLines().map((l) => `
+      <div class="cline">
+        <span>${esc(l.p.name)} × ${l.qty}</span>
+        <span>${soum(price(l.p) * l.qty)}</span>
+      </div>`).join("")}
+    <div class="cline"><b>Jami</b><b>${soum(cartSum())} so'm</b></div>
+    ${needTable ? `<textarea id="tbl" rows="1" placeholder="Stol raqami"></textarea>` : ""}
+    <textarea id="note" rows="2" placeholder="Izoh (masalan: achchiq bo'lmasin)"></textarea>
+    <button class="send" id="send">Oshxonaga yuborish</button>
+    <button class="close" id="closeCart">Yopish</button>
+    <div class="err" id="cartErr"></div>
+  `;
+  el("closeCart").addEventListener("click", () => el("cart").close());
+  el("send").addEventListener("click", send);
+  el("cart").showModal();
+}
+
+const ERRORS = {
+  qr_off: "Bu do'konda QR orqali buyurtma yoqilmagan.",
+  too_many: "Juda tez-tez yuborilyapti. Biroz kuting.",
+  empty: "Savat bo'sh.",
+  bad_request: "Stol raqamini kiriting.",
+};
+
+async function send() {
+  const btn = el("send");
+  const table = tableNo || (el("tbl")?.value || "").trim();
+  const note = (el("note")?.value || "").trim();
+  if (!table) { el("cartErr").textContent = "Stol raqamini kiriting."; return; }
+
+  btn.disabled = true;
+  el("cartErr").textContent = "";
+  try {
+    // The note rides on the first line — the kitchen reads it with the ticket.
+    const items = cartLines().map((l, i) => ({
+      id: l.p.$id,
+      qty: l.qty,
+      note: i === 0 ? note : "",
+    }));
+    const exec = await fn.createExecution(
+      FN,
+      JSON.stringify({ action: "table-order", shopId, tableNo: table, items }),
+      false
+    );
+    const r = JSON.parse(exec.responseBody || "{}");
+    if (!r.ok) throw { code: r.error };
+
+    cart = {};
+    el("cartBody").innerHTML = `
+      <div class="ok">
+        <div class="big">✅</div>
+        <h2>Buyurtma qabul qilindi</h2>
+        <p>Oshxonaga yuborildi. Ofitsiant tez orada keladi.</p>
+        <button class="close" id="closeCart2">Yopish</button>
+      </div>`;
+    el("closeCart2").addEventListener("click", () => { el("cart").close(); render(); });
+  } catch (err) {
+    el("cartErr").textContent = ERRORS[err && err.code] || "Yuborib bo'lmadi. Qayta urinib ko'ring.";
+    btn.disabled = false;
+  }
+}
+
+boot();
+</script>
+</body>
+</html>
