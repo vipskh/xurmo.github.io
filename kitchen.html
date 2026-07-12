@@ -75,7 +75,6 @@
     <select id="shopSel" class="hidden"></select>
     <span class="shop" id="shopName"></span>
     <button class="logout" id="soundBtn">🔔 Ovoz</button>
-    <a class="logout" href="./kassa.html">Kassa</a>
     <button class="logout" id="logout">Chiqish</button>
   </header>
   <div id="grid"></div>
@@ -163,28 +162,28 @@ el("shopSel").addEventListener("change", (e) => selectShop(e.target.value));
 async function start() {
   const me = await account.get();
   ownerId = me.$id;
-  const res = await db.listDocuments(DB, C_BIZ, [Query.equal("ownerId", ownerId), Query.limit(50)]);
-  // Prefer FOOD shops; fall back to all so any owner can open the screen.
-  shops = res.documents.filter(b => b.mode === "food");
-  if (shops.length === 0) shops = res.documents;
-  if (shops.length === 0) { el("loginErr").textContent = "Do'kon topilmadi"; return; }
+
+  // The screen is paired to ONE shop — the one the code was minted for. We no
+  // longer ask "which shops does this account own", because this account owns
+  // none: the kitchen runs on its own device user, not on the owner's login, so
+  // the browser by the stove can't reach the till, the reports or the settings.
+  const paired = localStorage.getItem("kds_shop");
+  if (!paired) { el("loginErr").textContent = "Qayta kod oling"; return; }
+
+  let shop;
+  try {
+    shop = await db.getDocument(DB, C_BIZ, paired);
+  } catch {
+    el("loginErr").textContent = "Do'kon topilmadi";
+    return;
+  }
+  shops = [shop];
 
   el("login").classList.add("hidden");
   el("app").classList.remove("hidden");
 
-  const sel = el("shopSel");
-  if (shops.length > 1) {
-    sel.classList.remove("hidden");
-    sel.innerHTML = shops.map(s => `<option value="${s.$id}">${s.name}</option>`).join("");
-  }
   subscribe();
-
-  // The code was minted for one specific shop — open that one (an owner with
-  // several restaurants pairs each kitchen screen to its own).
-  const paired = localStorage.getItem("kds_shop");
-  const pick = shops.find(s => s.$id === paired) || shops[0];
-  if (shops.length > 1) sel.value = pick.$id;
-  selectShop(pick.$id);
+  selectShop(shop.$id);
 }
 
 function selectShop(id) {
@@ -303,10 +302,16 @@ el("grid").addEventListener("click", async (e) => {
   if (vd) return voidOrder(vd.dataset.void);
 });
 
-// Cook marks a ticket cooked → it leaves the kitchen (cashier still settles it).
+// Cook marks a ticket cooked → it leaves the kitchen (cashier still settles it),
+// and the server tells whoever has to carry the plate: the waiter who took the
+// order, or — for a QR order, which has no waiter — everyone on shift.
 async function markReady(id) {
   orders = orders.filter(x => x.$id !== id); render();
-  try { await db.updateDocument(DB, C_KITCHEN, id, { status: "ready" }); } catch { loadOrders(); }
+  try {
+    await db.updateDocument(DB, C_KITCHEN, id, { status: "ready" });
+    fn.createExecution(FN_AUTH, JSON.stringify({ action: "order-ready", orderId: id }), false)
+      .catch(() => {}); // a missed push is not worth blocking the queue
+  } catch { loadOrders(); }
 }
 
 async function voidOrder(id) {

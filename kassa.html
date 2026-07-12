@@ -203,9 +203,20 @@ async function start() {
   const me = await account.get();
   ownerId = me.$id;
 
+  // The till belongs to the owner. A kitchen device account owns no shop, so it
+  // lands here — say so plainly instead of leaving a cook staring at an empty
+  // screen wondering what they did wrong.
   const res = await db.listDocuments(DB, C_BIZ, [Query.equal("ownerId", ownerId), Query.limit(50)]);
   const shops = res.documents || [];
-  if (!shops.length) { el("loginErr").textContent = "Bu hisobda do'kon topilmadi"; return; }
+  if (!shops.length) {
+    try { await account.deleteSession("current"); } catch {}
+    localStorage.removeItem("kds_shop");
+    el("app").style.display = "none";
+    el("login").style.display = "grid";
+    el("loginErr").textContent =
+      "Bu qurilma oshxona uchun. Kassaga kirish uchun ilovadan KASSA kodini oling.";
+    return;
+  }
   const paired = localStorage.getItem("kds_shop");
   shop = shops.find((s) => s.$id === paired) || shops[0];
 
