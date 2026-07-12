@@ -74,6 +74,7 @@
     <h2>Oshxona</h2>
     <select id="shopSel" class="hidden"></select>
     <span class="shop" id="shopName"></span>
+    <button class="logout" id="soundBtn">🔔 Ovoz</button>
     <a class="logout" href="./kassa.html">Kassa</a>
     <button class="logout" id="logout">Chiqish</button>
   </header>
@@ -112,6 +113,8 @@ const ago = (iso) => {
 
 const el = (id) => document.getElementById(id);
 let shops = [], shopId = null, ownerId = null, orders = [], unsub = null;
+// The first load is the backlog, not news — don't ring for it.
+let booted = false;
 
 // ---- Auth ----
 // No password: the owner gets a one-time code in the app, we trade it for a
@@ -199,6 +202,40 @@ function subscribe() {
   });
 }
 
+// ---- Sound ----
+// A kitchen screen lives on a wall; nobody is watching it. A ticket that arrives
+// in silence is a ticket that gets cooked twenty minutes late — and with QR
+// ordering there is no waiter shouting it out any more. Synthesised, so there is
+// no audio file to host and nothing to load before it can ring.
+let audio = null;
+let soundOn = localStorage.getItem("kds_sound") !== "off";
+
+function beep(times = 3) {
+  if (!soundOn) return;
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === "suspended") audio.resume();
+    for (let i = 0; i < times; i++) {
+      const t = audio.currentTime + i * 0.22;
+      const osc = audio.createOscillator();
+      const gain = audio.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, t);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+      osc.connect(gain).connect(audio.destination);
+      osc.start(t);
+      osc.stop(t + 0.2);
+    }
+  } catch {}
+}
+
+function paintSound() {
+  const b = el("soundBtn");
+  if (b) b.textContent = soundOn ? "🔔 Ovoz" : "🔕 Ovoz";
+}
+
 async function loadOrders() {
   const id = shopId;
   try {
@@ -209,12 +246,28 @@ async function loadOrders() {
       Query.limit(100),
     ]);
     if (id !== shopId) return; // shop switched mid-flight
+
+    // Ring only for tickets we haven't seen — not on every refresh, and not for
+    // the backlog already on screen when the kitchen opens the page.
+    const known = new Set(orders.map((o) => o.$id));
+    const fresh = res.documents.filter((o) => !known.has(o.$id));
+
     orders = res.documents;
     render();
+    if (fresh.length && booted) beep(3);
+    booted = true;
   } catch (e) { console.error(e); }
 }
 
 // Fallback refresh in case a realtime event is missed.
+el("soundBtn").addEventListener("click", () => {
+  soundOn = !soundOn;
+  localStorage.setItem("kds_sound", soundOn ? "on" : "off");
+  paintSound();
+  if (soundOn) beep(1); // prove it works, and unlock audio on this click
+});
+paintSound();
+
 setInterval(() => { if (shopId) loadOrders(); }, 15000);
 setInterval(render, 30000); // keep "X daq oldin" fresh
 
