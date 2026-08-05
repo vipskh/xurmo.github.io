@@ -230,6 +230,13 @@ img { max-width: 100%; display: block; }
 .btn-sm { padding: 6px 10px; font-size: 13px; }
 .btn-block { width: 100%; }
 
+/* --- Bosh sahifa (platforma) --- */
+
+.home-hero { padding: 64px 0; max-width: 640px; }
+.home-hero .page-title { margin-top: 0; }
+.home-lead { color: var(--muted); font-size: 16px; line-height: 1.6; margin: 12px 0 28px; }
+.home-cta { display: flex; gap: 12px; }
+
 /* --- 404 / xatolik --- */
 
 .center-page { text-align: center; padding: 80px 16px; }
