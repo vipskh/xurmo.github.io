@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Kategoriyalar — Admin panel</title>
+	<meta name="robots" content="noindex">
+	<link rel="stylesheet" href="../css/style.css">
+	<link rel="stylesheet" href="../css/admin.css">
+	<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+	<link rel="manifest" href="../manifest.json">
+	<meta name="theme-color" content="#1c2126">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-title" content="Menyu">
+	<link rel="apple-touch-icon" href="../icon-192.svg">
+</head>
+<body class="admin">
+<main class="wrap admin-main">
+
+<div class="page-head">
+	<h1>Kategoriyalar <span class="count" id="count">…</span></h1>
+</div>
+
+<p class="alert" id="msg" hidden></p>
+
+<fieldset class="cat-new">
+	<legend>Yangi kategoriya</legend>
+	<form class="row-form" id="new-form">
+		<input type="text" name="name_uz" placeholder="Nomi (uz) *" required>
+		<input type="text" name="name_ru" placeholder="Nomi (ru)">
+		<input type="text" name="name_en" placeholder="Nomi (en)">
+		<input type="file" name="image" accept="image/*" title="Rasm (ixtiyoriy)">
+		<input type="number" name="sort" placeholder="Tartib" value="0" class="narrow">
+		<button type="submit" class="btn btn-primary">Qo‘shish</button>
+	</form>
+</fieldset>
+
+<p class="empty" id="loading">Yuklanmoqda…</p>
+<div class="cat-list" id="list"></div>
+
+</main>
+
+<script type="module">
+	import { CFG, getCategories, getProducts, createRow, updateRow, deleteRow,
+	         uploadImage, deleteImage, imageUrl } from '../js/appwrite.js';
+	import { requireAuth, renderHeader, showMessage, esc, confirmAction } from '../js/admin-shell.js';
+
+	await requireAuth();
+	renderHeader('categories');
+
+	const $ = (id) => document.getElementById(id);
+	let categories = [], products = [];
+
+	async function load() {
+		[categories, products] = await Promise.all([getCategories(), getProducts()]);
+		$('loading').hidden = true;
+		$('count').textContent = categories.length;
+		render();
+	}
+
+	function render() {
+		if (!categories.length) {
+			$('list').innerHTML = '<p class="empty">Kategoriya yo‘q. Yuqoridagi forma orqali qo‘shing.</p>';
+			return;
+		}
+
+		$('list').innerHTML = categories.map((c) => {
+			const used = products.filter((p) => p.category_id === c.$id).length;
+			return `
+			<div class="cat-card">
+				<form class="cat-card-form" data-id="${c.$id}">
+					<div class="cat-card-img">
+						${c.image
+							? `<img src="${imageUrl(c.image)}" alt="" class="thumb thumb-lg">
+							   <label class="check tiny">
+							     <input type="checkbox" name="remove_image"> Rasmni o‘chirish
+							   </label>`
+							: '<span class="thumb thumb-lg thumb-empty">—</span>'}
+						<label class="file-label">
+							Rasm almashtirish
+							<input type="file" name="image" accept="image/*">
+						</label>
+					</div>
+
+					<div class="cat-card-fields">
+						<label>Nomi (uz) <input type="text" name="name_uz" value="${esc(c.name_uz)}" required></label>
+						<label>Nomi (ru) <input type="text" name="name_ru" value="${esc(c.name_ru)}"></label>
+						<label>Nomi (en) <input type="text" name="name_en" value="${esc(c.name_en)}"></label>
+						<div class="cat-card-fields-row">
+							<label>Tartib <input type="number" name="sort" value="${c.sort}"></label>
+							<span class="muted">Mahsulot: ${used} ta</span>
+						</div>
+					</div>
+
+					<div class="cat-card-actions">
+						<button type="submit" class="btn btn-primary btn-sm">Saqlash</button>
+					</div>
+				</form>
+
+				<div class="cat-card-actions">
+					<button type="button" class="btn btn-sm btn-danger"
+						data-delete="${c.$id}" data-used="${used}">O‘chirish</button>
+				</div>
+			</div>`;
+		}).join('');
+	}
+
+	// --- Yangi kategoriya ---
+
+	$('new-form').addEventListener('submit', async (e) => {
+		e.preventDefault();
+		const f = e.target;
+		const btn = f.querySelector('button');
+		btn.disabled = true;
+
+		try {
+			const file = f.image.files[0];
+			const image = file ? await uploadImage(file) : '';
+			await createRow(CFG.tblCategories, {
+				name_uz: f.name_uz.value.trim(),
+				name_ru: f.name_ru.value.trim(),
+				name_en: f.name_en.value.trim(),
+				image,
+				sort: parseInt(f.sort.value, 10) || 0,
+			});
+			f.reset();
+			showMessage('Kategoriya qo‘shildi');
+			await load();
+		} catch (err) {
+			showMessage(err.message || 'Xatolik', 'error');
+		} finally {
+			btn.disabled = false;
+		}
+	});
+
+	// --- Tahrirlash ---
+
+	$('list').addEventListener('submit', async (e) => {
+		e.preventDefault();
+		const f = e.target;
+		const c = categories.find((x) => x.$id === f.dataset.id);
+		const btn = f.querySelector('button[type="submit"]');
+		btn.disabled = true;
+
+		try {
+			let image = c.image || '';
+			const file = f.image.files[0];
+			if (file) image = await uploadImage(file);
+			else if (f.remove_image?.checked) image = '';
+
+			await updateRow(CFG.tblCategories, c.$id, {
+				name_uz: f.name_uz.value.trim(),
+				name_ru: f.name_ru.value.trim(),
+				name_en: f.name_en.value.trim(),
+				image,
+				sort: parseInt(f.sort.value, 10) || 0,
+			});
+			if (c.image && c.image !== image) await deleteImage(c.image);
+			showMessage('Saqlandi');
+			await load();
+		} catch (err) {
+			showMessage(err.message || 'Xatolik', 'error');
+			btn.disabled = false;
+		}
+	});
+
+	// --- O'chirish ---
+
+	$('list').addEventListener('click', async (e) => {
+		const btn = e.target.closest('[data-delete]');
+		if (!btn) return;
+
+		const c = categories.find((x) => x.$id === btn.dataset.delete);
+		const used = Number(btn.dataset.used);
+		const warn = used ? ` ${used} ta mahsulot kategoriyasiz qoladi.` : '';
+		if (!confirmAction(`«${c.name_uz}» o‘chirilsinmi?${warn}`)) return;
+
+		btn.disabled = true;
+		try {
+			// Mahsulotlar o'chmaydi — ular "kategoriyasiz" bo'lib qoladi
+			const orphans = products.filter((p) => p.category_id === c.$id);
+			await Promise.all(orphans.map((p) => updateRow(CFG.tblProducts, p.$id, { category_id: '' })));
+
+			await deleteRow(CFG.tblCategories, c.$id);
+			await deleteImage(c.image);
+			showMessage('Kategoriya o‘chirildi');
+			await load();
+		} catch (err) {
+			showMessage(err.message || 'Xatolik', 'error');
+			btn.disabled = false;
+		}
+	});
+
+	await load();
+</script>
+</body>
+</html>

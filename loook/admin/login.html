@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Kirish — Admin panel</title>
+	<meta name="robots" content="noindex">
+	<link rel="stylesheet" href="../css/style.css">
+	<link rel="stylesheet" href="../css/admin.css">
+	<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+	<link rel="manifest" href="../manifest.json">
+	<meta name="theme-color" content="#1c2126">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-title" content="Menyu">
+	<link rel="apple-touch-icon" href="../icon-192.svg">
+</head>
+<body class="admin login-page">
+	<form class="login-box" id="form">
+		<h1>Admin <span>panel</span></h1>
+		<p class="alert alert-error" id="error" hidden></p>
+		<p class="alert alert-demo" id="demo">
+			Sinov uchun tayyor akkaunt:<br>
+			<strong>demo@xurmo.me</strong> / <strong>demo2026x</strong>
+		</p>
+		<label>
+			Email
+			<input type="email" name="email" value="demo@xurmo.me" autofocus required>
+		</label>
+		<label>
+			Parol
+			<input type="password" name="password" value="demo2026x" required>
+		</label>
+		<button type="submit" class="btn btn-primary btn-block" id="submit">Kirish</button>
+	</form>
+
+<script type="module">
+	import { login, currentUser } from '../js/appwrite.js';
+
+	// Allaqachon kirgan bo'lsa — to'g'ridan-to'g'ri panelga
+	if (await currentUser()) location.replace('./');
+
+	const form = document.getElementById('form');
+	const error = document.getElementById('error');
+	const submit = document.getElementById('submit');
+
+	form.addEventListener('submit', async (e) => {
+		e.preventDefault();
+		error.hidden = true;
+		submit.disabled = true;
+		submit.textContent = 'Tekshirilmoqda…';
+
+		try {
+			await login(form.email.value.trim(), form.password.value);
+			location.replace('./');
+		} catch (err) {
+			error.textContent = err.status === 401
+				? 'Email yoki parol noto‘g‘ri'
+				: (err.message || 'Kirishda xatolik');
+			error.hidden = false;
+			submit.disabled = false;
+			submit.textContent = 'Kirish';
+		}
+	});
+</script>
+</body>
+</html>

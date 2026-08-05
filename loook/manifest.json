@@ -1,0 +1,26 @@
+{
+	"name": "Menyu — admin panel",
+	"short_name": "Menyu",
+	"description": "Restoran menyusini boshqarish: mahsulot qo'shish, narx o'zgartirish, rasm yuklash",
+	"start_url": "admin/",
+	"scope": "./",
+	"display": "standalone",
+	"orientation": "portrait-primary",
+	"background_color": "#f2f4f6",
+	"theme_color": "#1c2126",
+	"lang": "uz",
+	"icons": [
+		{
+			"src": "icon-192.svg",
+			"sizes": "any",
+			"type": "image/svg+xml",
+			"purpose": "any"
+		},
+		{
+			"src": "icon-192.svg",
+			"sizes": "any",
+			"type": "image/svg+xml",
+			"purpose": "maskable"
+		}
+	]
+}

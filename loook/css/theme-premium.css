@@ -1,0 +1,434 @@
+/* ============================================================
+   2-VARIANT — "Premium" (qora-oltin)
+   Qaroqchi Pizza uslubidagi referens asosida.
+   ------------------------------------------------------------
+   style.css ga TEGILMAYDI. Barcha qoidalar [data-theme="premium"]
+   ichida — mavzu tanlanmasa, bu fayl hech narsaga ta'sir qilmaydi.
+   1-variant (klassik oq-qizil) o'z holicha qoladi.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,300;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
+[data-theme="premium"] {
+	--ink: #0C0B09;
+	--cream: #F5F0E8;
+	--gold: #C9A84C;
+	--gold-light: #E8C96A;
+	--deep-red: #8B1A1A;
+	--warm-gray: #1C1A16;
+	--mid: #2A2620;
+	--dim: #6B6355;
+	--text-light: #D4C9B0;
+	--hairline: rgba(201, 168, 76, .15);
+}
+
+/* --- Faqat premium variantda ko'rinadigan bo'laklar --- */
+
+.premium-only { display: none; }
+[data-theme="premium"] .premium-only { display: block; }
+
+/* Variant almashtirish tugmasi — ikkalasida ham ko'rinadi */
+.theme-toggle {
+	background: transparent;
+	border: 1px solid var(--line);
+	color: var(--muted);
+	border-radius: 8px;
+	width: 32px;
+	height: 32px;
+	font-size: 15px;
+	cursor: pointer;
+	margin-left: 6px;
+	line-height: 1;
+}
+
+.theme-toggle:hover { border-color: var(--red); color: var(--red); }
+
+[data-theme="premium"] .theme-toggle {
+	border-color: rgba(201, 168, 76, .35);
+	color: var(--gold);
+	border-radius: 2px;
+}
+
+[data-theme="premium"] .theme-toggle:hover { background: var(--gold); color: var(--ink); }
+
+/* --- Asos --- */
+
+/* DIQQAT: bu yerda `color` va `font-family` ATAYLAB berilmagan.
+   Aks holda ular plitkalar ichiga ham meros bo'lib o'tadi va oq
+   kartada oq yozuv paydo bo'ladi. Har bir premium element o'z
+   rangini o'zi belgilaydi. */
+[data-theme="premium"] body {
+	background: var(--ink);
+}
+
+/* Donador qatlam — matoga o'xshash chuqurlik */
+[data-theme="premium"] body::after {
+	content: '';
+	position: fixed;
+	inset: 0;
+	background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+	pointer-events: none;
+	z-index: 9999;
+	opacity: .4;
+}
+
+[data-theme="premium"] ::-webkit-scrollbar { width: 4px; }
+[data-theme="premium"] ::-webkit-scrollbar-track { background: var(--ink); }
+[data-theme="premium"] ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 2px; }
+
+/* --- Sarlavha --- */
+
+[data-theme="premium"] .site-header {
+	background: rgba(12, 11, 9, .96);
+	border-bottom: 1px solid var(--hairline);
+	backdrop-filter: blur(8px);
+}
+
+[data-theme="premium"] .logo {
+	font-family: 'Bebas Neue', sans-serif;
+	font-weight: 400;
+	font-size: 1.5rem;
+	letter-spacing: .25em;
+	color: var(--gold);
+}
+
+[data-theme="premium"] .langs a {
+	color: var(--dim);
+	border-radius: 2px;
+	font-size: .78rem;
+	letter-spacing: .15em;
+	text-transform: uppercase;
+	font-weight: 500;
+}
+
+[data-theme="premium"] .langs a:hover { color: var(--gold); }
+
+[data-theme="premium"] .langs a.is-active {
+	background: transparent;
+	color: var(--gold);
+	border: 1px solid var(--gold);
+}
+
+/* --- HERO --- */
+
+[data-theme="premium"] .hero-band {
+	position: relative;
+	overflow: hidden;
+	background: var(--ink);
+	padding: 5rem 0 4rem;
+	text-align: center;
+}
+
+[data-theme="premium"] .hero-glow {
+	position: absolute;
+	inset: 0;
+	background:
+		radial-gradient(ellipse 60% 80% at 50% 45%, rgba(139, 26, 26, .13) 0%, transparent 70%),
+		radial-gradient(ellipse 40% 60% at 15% 85%, rgba(201, 168, 76, .07) 0%, transparent 60%),
+		repeating-linear-gradient(90deg, rgba(201,168,76,.02) 0 1px, transparent 1px 80px),
+		repeating-linear-gradient(0deg, rgba(201,168,76,.02) 0 1px, transparent 1px 80px);
+	pointer-events: none;
+}
+
+[data-theme="premium"] .hero-inner { position: relative; z-index: 1; }
+
+[data-theme="premium"] .hero-eyebrow {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 1rem;
+	margin-bottom: 1.5rem;
+}
+
+[data-theme="premium"] .hero-eyebrow-line {
+	width: 40px;
+	height: 1px;
+	background: var(--gold);
+}
+
+[data-theme="premium"] .hero-eyebrow-text {
+	font-family: 'Cormorant Garamond', serif;
+	font-style: italic;
+	font-size: 1rem;
+	color: var(--gold);
+	letter-spacing: .1em;
+}
+
+[data-theme="premium"] .hero-title {
+	font-family: 'Bebas Neue', sans-serif;
+	font-weight: 400;
+	font-size: clamp(4rem, 10vw, 8rem);
+	line-height: .9;
+	letter-spacing: .05em;
+	color: var(--cream);
+	margin: 0 0 .5rem;
+}
+
+[data-theme="premium"] .hero-subtitle {
+	font-family: 'Cormorant Garamond', serif;
+	font-style: italic;
+	font-size: 1.3rem;
+	color: var(--dim);
+	letter-spacing: .05em;
+	margin: 0 0 3rem;
+}
+
+[data-theme="premium"] .hero-stats {
+	display: flex;
+	justify-content: center;
+	flex-wrap: wrap;
+	gap: 3rem;
+}
+
+[data-theme="premium"] .hero-stat { display: flex; flex-direction: column; gap: .2rem; }
+
+[data-theme="premium"] .hero-stat-num {
+	font-family: 'Bebas Neue', sans-serif;
+	font-weight: 400;
+	font-size: 2rem;
+	color: var(--gold);
+	line-height: 1;
+}
+
+[data-theme="premium"] .hero-stat-label {
+	font-size: .7rem;
+	letter-spacing: .15em;
+	text-transform: uppercase;
+	color: var(--dim);
+}
+
+/* --- Kontakt lentasi --- */
+
+[data-theme="premium"] .contact-band {
+	background: var(--deep-red);
+	padding: .9rem 3rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 3rem;
+	flex-wrap: wrap;
+	position: relative;
+	z-index: 10;
+}
+
+[data-theme="premium"] .contact-band-item {
+	display: flex;
+	align-items: center;
+	gap: .6rem;
+	font-size: .85rem;
+	font-weight: 500;
+	letter-spacing: .05em;
+	color: rgba(255, 255, 255, .9);
+}
+
+[data-theme="premium"] a.contact-band-item:hover { color: #fff; }
+
+[data-theme="premium"] .contact-band-divider {
+	width: 1px;
+	height: 20px;
+	background: rgba(255, 255, 255, .2);
+}
+
+/* --- Sahifa sarlavhasi (hero bor, shuning uchun yashiriladi) --- */
+
+[data-theme="premium"] .page-title { display: none; }
+
+/* --- Qidiruv --- */
+
+[data-theme="premium"] .toolbar {
+	display: flex;
+	justify-content: center;
+	margin: 3rem 0 1rem;
+}
+
+[data-theme="premium"] .search {
+	background: var(--warm-gray);
+	border: 1px solid var(--hairline);
+	border-radius: 2px;
+	color: var(--cream);
+	letter-spacing: .05em;
+}
+
+[data-theme="premium"] .search::placeholder { color: var(--dim); }
+
+[data-theme="premium"] .search:focus {
+	border-color: var(--gold);
+	box-shadow: none;
+}
+
+/* --- Kategoriya tablari --- */
+
+[data-theme="premium"] .cat-nav {
+	justify-content: center;
+	gap: 0;
+	border-bottom: 1px solid var(--hairline);
+	margin: 0 0 3rem;
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+
+[data-theme="premium"] .cat-nav::-webkit-scrollbar { display: none; }
+
+[data-theme="premium"] .cat-nav a {
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	color: var(--dim);
+	font-family: 'DM Sans', sans-serif;
+	font-size: .8rem;
+	font-weight: 500;
+	letter-spacing: .12em;
+	text-transform: uppercase;
+	padding: 1rem 1.8rem;
+	white-space: nowrap;
+	position: relative;
+}
+
+[data-theme="premium"] .cat-nav a::after {
+	content: '';
+	position: absolute;
+	bottom: -1px;
+	left: 0;
+	right: 0;
+	height: 2px;
+	background: var(--gold);
+	transform: scaleX(0);
+	transition: transform .3s;
+}
+
+[data-theme="premium"] .cat-nav a:hover { color: var(--cream); border-color: transparent; }
+[data-theme="premium"] .cat-nav a:hover::after { transform: scaleX(1); }
+
+[data-theme="premium"] .cat-nav a.has-img img {
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+	filter: grayscale(.35);
+}
+
+/* --- Bo'lim sarlavhasi --- */
+
+[data-theme="premium"] .cat-block { margin-bottom: 4rem; }
+
+[data-theme="premium"] .cat-title {
+	font-family: 'Bebas Neue', sans-serif;
+	font-weight: 400;
+	font-size: clamp(2rem, 4vw, 3rem);
+	letter-spacing: .08em;
+	color: var(--cream);
+	text-align: center;
+	border-left: 0;
+	padding-left: 0;
+	margin: 0 0 2rem;
+}
+
+/* Sarlavha ostida ikki tomonlama so'nuvchi chiziq */
+[data-theme="premium"] .cat-title::after {
+	content: '❦';
+	display: block;
+	color: var(--gold);
+	font-size: .9rem;
+	opacity: .7;
+	margin-top: .6rem;
+	font-family: serif;
+}
+
+/* --- PLITKALAR ---
+   Ataylab BO'SH: kartalar va to'r 1-variantdagidek qoladi.
+   Joylashuv (grid, gap, o'lcham, padding, border-radius) ham,
+   rang (fon, matn, narx) ham style.css dan olinadi — tegilmaydi.
+   --- */
+
+/* ============================================================
+   PLITKALAR — faqat RANG.
+   Joylashuvga (grid-template-columns, gap: 20px, border-radius,
+   padding) TEGILMAYDI — ular style.css dan olinadi.
+   ============================================================ */
+
+[data-theme="premium"] .card {
+	background: var(--warm-gray);
+	box-shadow: 0 2px 12px rgba(0, 0, 0, .3);
+}
+
+[data-theme="premium"] .card:hover {
+	background: var(--mid);
+	box-shadow: 0 10px 26px rgba(0, 0, 0, .45);
+}
+
+/* Rasm maydoni — mahsulot suratlari oq fonli, shuning uchun oq qoladi */
+[data-theme="premium"] .card-name { color: var(--cream); }
+
+[data-theme="premium"] .card-desc { color: var(--dim); }
+
+[data-theme="premium"] .card-price {
+	color: var(--gold);
+	border-top: 1px solid rgba(201, 168, 76, .18);
+}
+
+[data-theme="premium"] .card-price span { color: var(--dim); }
+
+/* --- Bo'sh holat --- */
+
+[data-theme="premium"] .empty {
+	background: var(--warm-gray);
+	border: 1px solid var(--hairline);
+	border-radius: 0;
+	color: var(--dim);
+	font-family: 'Cormorant Garamond', serif;
+	font-style: italic;
+	font-size: 1.1rem;
+}
+
+/* --- Pastki qism --- */
+
+[data-theme="premium"] .site-footer {
+	background: #080706;
+	border-top: 1px solid rgba(201, 168, 76, .08);
+	color: var(--dim);
+	text-align: center;
+	font-size: .72rem;
+	letter-spacing: .05em;
+	margin-top: 3rem;
+}
+
+/* --- Tugmalar --- */
+
+[data-theme="premium"] .btn {
+	background: transparent;
+	border: 1px solid rgba(213, 200, 176, .3);
+	color: var(--cream);
+	border-radius: 2px;
+	letter-spacing: .15em;
+	text-transform: uppercase;
+	font-size: .85rem;
+	font-weight: 500;
+}
+
+[data-theme="premium"] .btn:hover { border-color: var(--gold); color: var(--gold); }
+
+[data-theme="premium"] .btn-primary {
+	background: var(--gold);
+	border-color: var(--gold);
+	color: var(--ink);
+	font-weight: 600;
+}
+
+[data-theme="premium"] .btn-primary:hover {
+	background: var(--gold-light);
+	border-color: var(--gold-light);
+	color: var(--ink);
+}
+
+/* --- Kichik ekran --- */
+
+@media (max-width: 900px) {
+	[data-theme="premium"] .hero-band { padding: 3.5rem 0 2.5rem; }
+	[data-theme="premium"] .hero-stats { gap: 1.8rem; }
+	[data-theme="premium"] .hero-stat-num { font-size: 1.6rem; }
+}
+
+@media (max-width: 600px) {
+	[data-theme="premium"] .cat-nav { justify-content: flex-start; }
+	[data-theme="premium"] .contact-band { gap: 1rem; padding: .8rem 1rem; }
+	[data-theme="premium"] .contact-band-divider { display: none; }
+}

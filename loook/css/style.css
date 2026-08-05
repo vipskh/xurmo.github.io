@@ -1,4 +1,4 @@
-/* LOOOK menyu sayti — ranglar asl saytdan olingan (index-2.css) */
+/* Menyu sayti — asosiy uslublar */
 
 :root {
 	--red: #c00a27;
@@ -57,6 +57,7 @@ img { max-width: 100%; display: block; }
 }
 
 .langs { display: flex; gap: 4px; }
+.header-actions { display: flex; align-items: center; gap: 8px; }
 
 .langs a {
 	padding: 6px 10px;

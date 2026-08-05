@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Mahsulotlar — Admin panel</title>
+	<meta name="robots" content="noindex">
+	<link rel="stylesheet" href="../css/style.css">
+	<link rel="stylesheet" href="../css/admin.css">
+	<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+	<link rel="manifest" href="../manifest.json">
+	<meta name="theme-color" content="#1c2126">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-title" content="Menyu">
+	<link rel="apple-touch-icon" href="../icon-192.svg">
+</head>
+<body class="admin">
+<main class="wrap admin-main">
+
+<div class="page-head">
+	<h1>Mahsulotlar <span class="count" id="count">…</span></h1>
+	<button type="button" class="btn btn-primary" id="new-btn">+ Yangi mahsulot</button>
+</div>
+
+<p class="alert" id="msg" hidden></p>
+
+<div class="filters" id="filters" hidden>
+	<input type="search" id="f-q" placeholder="Nomi bo‘yicha qidirish…" autocomplete="off">
+	<select id="f-cat"><option value="">Barcha kategoriyalar</option></select>
+	<select id="f-status">
+		<option value="">Barcha holatlar</option>
+		<option value="1">Ko‘rinadi</option>
+		<option value="0">Yashirin</option>
+	</select>
+	<span id="f-count" class="muted"></span>
+</div>
+
+<p class="empty" id="loading">Yuklanmoqda…</p>
+
+<table class="table" id="table" hidden>
+	<thead>
+		<tr>
+			<th class="col-img"></th>
+			<th>Nomi</th>
+			<th>Kategoriya</th>
+			<th class="col-price">Narx</th>
+			<th class="col-sort">Tartib</th>
+			<th class="col-status">Holat</th>
+			<th class="col-actions"></th>
+		</tr>
+	</thead>
+	<tbody id="tbody"></tbody>
+</table>
+
+<!-- Tahrirlash formasi — ro'yxat ustida ochiladi -->
+<div id="form-wrap" hidden>
+	<div class="page-head">
+		<h1 id="form-title">Yangi mahsulot</h1>
+		<button type="button" class="btn btn-ghost" id="cancel-top">← Ortga</button>
+	</div>
+	<form class="form" id="product-form">
+		<div class="form-grid">
+			<div class="form-col">
+				<fieldset>
+					<legend>Nomi</legend>
+					<label>O‘zbekcha <span class="req">*</span>
+						<input type="text" name="name_uz" required>
+					</label>
+					<label>Ruscha <input type="text" name="name_ru"></label>
+					<label>Inglizcha <input type="text" name="name_en"></label>
+				</fieldset>
+				<fieldset>
+					<legend>Tarkibi / tavsifi</legend>
+					<label>O‘zbekcha <textarea name="desc_uz" rows="2"></textarea></label>
+					<label>Ruscha <textarea name="desc_ru" rows="2"></textarea></label>
+					<label>Inglizcha <textarea name="desc_en" rows="2"></textarea></label>
+				</fieldset>
+			</div>
+			<div class="form-col">
+				<fieldset>
+					<legend>Sozlamalar</legend>
+					<label>Kategoriya
+						<select name="category_id" id="form-cat"><option value="">— tanlanmagan —</option></select>
+					</label>
+					<label>Narxi (so‘m) <input type="number" name="price" min="0" step="500" value="0"></label>
+					<label>Tartib raqami
+						<input type="number" name="sort" value="0">
+						<small class="muted">Kichik raqam yuqorida turadi</small>
+					</label>
+					<label class="check">
+						<input type="checkbox" name="is_active" checked> Saytda ko‘rinsin
+					</label>
+				</fieldset>
+				<fieldset>
+					<legend>Rasm</legend>
+					<div class="img-preview" id="img-preview" hidden>
+						<img id="preview-img" alt="">
+						<label class="check">
+							<input type="checkbox" name="remove_image"> Rasmni o‘chirish
+						</label>
+					</div>
+					<input type="file" name="image" accept="image/*">
+					<small class="muted">jpg, png, webp, gif, avif — 5 MB gacha</small>
+				</fieldset>
+			</div>
+		</div>
+		<div class="form-actions">
+			<button type="submit" class="btn btn-primary" id="save-btn">Saqlash</button>
+			<button type="button" class="btn btn-ghost" id="cancel-btn">Bekor qilish</button>
+		</div>
+	</form>
+</div>
+
+</main>
+
+<script type="module">
+	import { CFG, getCategories, getProducts, createRow, updateRow, deleteRow,
+	         uploadImage, deleteImage, imageUrl } from '../js/appwrite.js';
+	import { requireAuth, renderHeader, showMessage, esc, money, confirmAction } from '../js/admin-shell.js';
+
+	await requireAuth();
+	renderHeader('products');
+
+	const $ = (id) => document.getElementById(id);
+	let categories = [], products = [], editing = null;
+
+	const catName = (id) => categories.find((c) => c.$id === id)?.name_uz || '—';
+
+	async function load() {
+		[categories, products] = await Promise.all([getCategories(), getProducts()]);
+		$('loading').hidden = true;
+		$('table').hidden = false;
+		$('filters').hidden = false;
+		$('count').textContent = products.length;
+
+		const opts = categories.map((c) => `<option value="${c.$id}">${esc(c.name_uz)}</option>`).join('');
+		$('f-cat').innerHTML = '<option value="">Barcha kategoriyalar</option>' + opts + '<option value="0">— kategoriyasiz —</option>';
+		$('form-cat').innerHTML = '<option value="">— tanlanmagan —</option>' + opts;
+
+		render();
+	}
+
+	function render() {
+		$('tbody').innerHTML = products.map((p) => `
+			<tr class="${p.is_active ? '' : 'is-hidden-row'}"
+				data-name="${esc((p.name_uz + ' ' + p.name_ru + ' ' + p.name_en).toLowerCase())}"
+				data-cat="${p.category_id || 0}" data-active="${p.is_active ? 1 : 0}">
+				<td class="col-img">${p.image
+					? `<img src="${imageUrl(p.image)}" alt="" class="thumb">`
+					: '<span class="thumb thumb-empty">—</span>'}</td>
+				<td>
+					<strong>${esc(p.name_uz)}</strong>
+					${p.desc_uz ? `<br><small class="muted">${esc(p.desc_uz)}</small>` : ''}
+				</td>
+				<td>${esc(catName(p.category_id))}</td>
+				<td class="col-price">${money(p.price)}</td>
+				<td class="col-sort">${p.sort}</td>
+				<td class="col-status">
+					<button type="button" class="badge ${p.is_active ? 'badge-ok' : 'badge-off'}"
+						data-toggle="${p.$id}" title="Bosing — saytda ko‘rinishini almashtiradi">
+						${p.is_active ? 'Ko‘rinadi' : 'Yashirin'}
+					</button>
+				</td>
+				<td class="col-actions">
+					<button type="button" class="btn btn-sm" data-edit="${p.$id}">Tahrirlash</button>
+					<button type="button" class="btn btn-sm btn-danger" data-delete="${p.$id}">O‘chirish</button>
+				</td>
+			</tr>`).join('');
+		applyFilter();
+	}
+
+	function applyFilter() {
+		const text = $('f-q').value.trim().toLowerCase();
+		const cat = $('f-cat').value, status = $('f-status').value;
+		const rows = [...document.querySelectorAll('#tbody tr')];
+		let shown = 0;
+		rows.forEach((tr) => {
+			const ok = (!text || tr.dataset.name.includes(text))
+				&& (!cat || tr.dataset.cat === cat)
+				&& (!status || tr.dataset.active === status);
+			tr.hidden = !ok;
+			if (ok) shown++;
+		});
+		$('f-count').textContent = shown === rows.length ? '' : `${shown} / ${rows.length}`;
+	}
+	['f-q', 'f-cat', 'f-status'].forEach((id) => $(id).addEventListener('input', applyFilter));
+
+	// --- Forma ---
+
+	function openForm(product) {
+		editing = product;
+		const f = $('product-form');
+		f.reset();
+		$('form-title').textContent = product ? 'Mahsulotni tahrirlash' : 'Yangi mahsulot';
+
+		for (const k of ['name_uz', 'name_ru', 'name_en', 'desc_uz', 'desc_ru', 'desc_en']) {
+			f[k].value = product?.[k] || '';
+		}
+		f.price.value = product?.price ?? 0;
+		f.sort.value = product?.sort ?? 0;
+		f.category_id.value = product?.category_id || '';
+		f.is_active.checked = product ? product.is_active : true;
+
+		const hasImg = Boolean(product?.image);
+		$('img-preview').hidden = !hasImg;
+		if (hasImg) $('preview-img').src = imageUrl(product.image);
+
+		$('form-wrap').hidden = false;
+		document.querySelector('.page-head').hidden = true;
+		$('filters').hidden = true;
+		$('table').hidden = true;
+		window.scrollTo(0, 0);
+	}
+
+	function closeForm() {
+		editing = null;
+		$('form-wrap').hidden = true;
+		document.querySelector('.page-head').hidden = false;
+		$('filters').hidden = false;
+		$('table').hidden = false;
+	}
+
+	$('new-btn').addEventListener('click', () => openForm(null));
+	$('cancel-btn').addEventListener('click', closeForm);
+	$('cancel-top').addEventListener('click', closeForm);
+
+	$('product-form').addEventListener('submit', async (e) => {
+		e.preventDefault();
+		const f = e.target;
+		const btn = $('save-btn');
+		btn.disabled = true;
+		btn.textContent = 'Saqlanmoqda…';
+
+		try {
+			// Rasm: yangisi yuklandi > "o'chirish" belgilandi > eskisi qoladi
+			let image = editing?.image || '';
+			const file = f.image.files[0];
+			if (file) {
+				if (file.size > 5 * 1024 * 1024) throw new Error('Rasm hajmi 5 MB dan oshmasligi kerak');
+				image = await uploadImage(file);
+			} else if (f.remove_image.checked) {
+				image = '';
+			}
+
+			const data = {
+				category_id: f.category_id.value || '',
+				name_uz: f.name_uz.value.trim(),
+				name_ru: f.name_ru.value.trim(),
+				name_en: f.name_en.value.trim(),
+				desc_uz: f.desc_uz.value.trim(),
+				desc_ru: f.desc_ru.value.trim(),
+				desc_en: f.desc_en.value.trim(),
+				price: parseInt(f.price.value, 10) || 0,
+				image,
+				is_active: f.is_active.checked,
+				sort: parseInt(f.sort.value, 10) || 0,
+			};
+
+			if (editing) {
+				await updateRow(CFG.tblProducts, editing.$id, data);
+				if (editing.image && editing.image !== image) await deleteImage(editing.image);
+				showMessage('Mahsulot yangilandi');
+			} else {
+				await createRow(CFG.tblProducts, data);
+				showMessage('Mahsulot qo‘shildi');
+			}
+
+			closeForm();
+			await load();
+		} catch (err) {
+			showMessage(err.message || 'Saqlashda xatolik', 'error');
+		} finally {
+			btn.disabled = false;
+			btn.textContent = 'Saqlash';
+		}
+	});
+
+	// --- Ro'yxatdagi tugmalar ---
+
+	$('tbody').addEventListener('click', async (e) => {
+		const btn = e.target.closest('button');
+		if (!btn) return;
+
+		if (btn.dataset.edit) return openForm(products.find((p) => p.$id === btn.dataset.edit));
+
+		if (btn.dataset.toggle) {
+			const p = products.find((x) => x.$id === btn.dataset.toggle);
+			btn.disabled = true;
+			try {
+				await updateRow(CFG.tblProducts, p.$id, { is_active: !p.is_active });
+				showMessage(`«${p.name_uz}» ${p.is_active ? 'yashirildi' : 'saytda ko‘rinadi'}`);
+				await load();
+			} catch (err) {
+				showMessage(err.message || 'Xatolik', 'error');
+				btn.disabled = false;
+			}
+		}
+
+		if (btn.dataset.delete) {
+			const p = products.find((x) => x.$id === btn.dataset.delete);
+			if (!confirmAction(`«${p.name_uz}» o‘chirilsinmi?`)) return;
+			try {
+				await deleteRow(CFG.tblProducts, p.$id);
+				await deleteImage(p.image);
+				showMessage('Mahsulot o‘chirildi');
+				await load();
+			} catch (err) {
+				showMessage(err.message || 'Xatolik', 'error');
+			}
+		}
+	});
+
+	await load();
+</script>
+</body>
+</html>
