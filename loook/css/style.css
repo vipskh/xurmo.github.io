@@ -248,3 +248,54 @@ img { max-width: 100%; display: block; }
 	.page-title { font-size: 26px; }
 	.grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
 }
+
+/* --- O'lcham tanlash va belgi (badge) --- */
+
+.card-img { position: relative; }
+
+.card-badge {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	background: var(--yellow);
+	color: #3a2a00;
+	border-radius: 999px;
+	padding: 3px 10px;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: .04em;
+	text-transform: uppercase;
+}
+
+.size-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 4px;
+}
+
+/* Tugmalar karta kengligiga teng bo'linadi va barmoq bilan bosishga qulay
+   (balandligi ~34px). min-width tor kartada ham o'qilishini ta'minlaydi. */
+.size-btn {
+	flex: 1 1 auto;
+	min-width: 58px;
+	background: #fff;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	color: var(--muted);
+	padding: 8px 10px;
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
+	text-align: center;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.size-btn:hover { border-color: var(--red); color: var(--red); }
+
+.size-btn.is-active {
+	background: var(--red);
+	border-color: var(--red);
+	color: #fff;
+}

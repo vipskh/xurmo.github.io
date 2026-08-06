@@ -1,0 +1,539 @@
+/* Savatcha paneli va buyurtma modali.
+   Manba: kfc.com.uz jonli sayti (2026-08-06 da DevTools orqali olingan
+   fayllar): basket.css (savatcha paneli), startorder.css (manzil/buyurtma
+   modali), custom2.css (o'zgaruvchilar qiymati).
+
+   O'lchamlar, radiuslar, breakpoint'lar — o'sha fayllardagi aniq
+   raqamlar. Rang/shrift — loyihaning o'z tokenlari (style.css):
+     KFC --color        -> --red
+     KFC --font-color    -> --text
+     KFC --bold-font      -> Montserrat, font-weight 700
+                             (KFC'ning o'zi 'CeraCompactPro-Bold' pullik
+                             shriftidan foydalanadi, u ko'chirilmadi)
+     KFC --radius-big     -> 32px (aynan)
+     KFC --radius-small   -> 16px (aynan)
+
+   Sakrash animatsiyasi: animate.css 3.7.0, Daniel Eden, MIT litsenziya
+   (https://daneden.github.io/animate.css/) — shu loyihada ishlatiladigan
+   2 ta keyframe, nom to'qnashmasligi uchun "menu" prefiksi bilan. */
+
+:root {
+	--radius-big: 32px;
+	--radius-small: 16px;
+	--bold: 700;
+}
+
+/* --- Savatcha tugmasi (header) --- */
+
+.cart-btn {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 38px;
+	height: 38px;
+	border-radius: 10px;
+	border: 1px solid var(--line);
+	background: #fff;
+	color: var(--text);
+	cursor: pointer;
+	margin-left: 6px;
+	font-size: 16px;
+	line-height: 1;
+}
+
+.cart-btn:hover { border-color: var(--red); color: var(--red); }
+
+.cart-count {
+	position: absolute;
+	top: -6px;
+	right: -6px;
+	min-width: 18px;
+	height: 18px;
+	padding: 0 4px;
+	border-radius: 999px;
+	background: var(--red);
+	color: #fff;
+	font-size: 11px;
+	font-weight: 700;
+	line-height: 18px;
+	text-align: center;
+}
+
+.cart-count[hidden] { display: none; }
+
+/* --- Karta ustidagi "qo'shish" tugmasi --- */
+
+.card-add {
+	width: 100%;
+	height: 36px;
+	margin-top: 8px;
+	border-radius: 8px;
+	border: 1px solid var(--red);
+	background: #fff;
+	color: var(--red);
+	font: inherit;
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: background .15s ease, color .15s ease;
+}
+
+.card-add:hover { background: var(--red); color: #fff; }
+.card-add.is-added { background: var(--red); color: #fff; }
+
+/* --- Orqa fon --- */
+
+.overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, .7);
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity .3s ease;
+	z-index: 1490;
+}
+
+.overlay.is-open { opacity: 1; pointer-events: auto; }
+
+body.no-scroll { overflow: hidden; }
+
+/* ============================================================
+   SAVATCHA PANELI
+   Manba: basket.css — #basket.basket-panel { width: 520px;
+   right: -520px; transition: 0.3s; z-index: 1500 }
+   ============================================================ */
+
+.cart-drawer {
+	width: 520px;
+	position: fixed;
+	right: -520px;
+	top: 0;
+	bottom: 0;
+	background-color: #fff;
+	transition: .3s;
+	overflow-x: hidden;
+	overflow-y: auto;
+	z-index: 1500;
+	display: flex;
+	flex-direction: column;
+}
+
+.cart-drawer.is-open { right: 0; }
+
+.cart-head {
+	width: 100%;
+	height: 80px;
+	flex: 0 0 auto;
+	padding: .75rem 1.75rem;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.cart-head h2 {
+	margin: 0;
+	font-family: Montserrat, sans-serif;
+	font-weight: var(--bold);
+	font-size: 20px;
+	line-height: 20px;
+	color: var(--text);
+}
+
+.cart-close {
+	width: 35px;
+	height: 35px;
+	border-radius: 50%;
+	border: none;
+	background: #ECECEC;
+	font-size: 15px;
+	cursor: pointer;
+	color: #171717;
+	flex-shrink: 0;
+}
+
+.cart-body { flex: 1; overflow-y: auto; padding: 0 1.5rem 40px; }
+
+.cart-empty {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	padding: 40px 16px;
+}
+
+.cart-empty-icon { font-size: 56px; opacity: .35; margin-bottom: 8px; }
+
+.cart-empty-text {
+	font-size: 14px;
+	line-height: 1.21;
+	text-align: center;
+	color: #3e3d3f;
+	padding-top: 1.5rem;
+	max-width: 220px;
+}
+
+/* --- Mahsulot qatori --- */
+/* Manba: basket-product / basketproduct-title / change-quantity */
+
+.cart-item {
+	display: flex;
+	gap: .75rem;
+	padding: 1.25rem 0 .75rem;
+	border-bottom: 1px solid #F5F5F5;
+}
+
+.cart-item-img {
+	width: 37px;
+	height: 37px;
+	object-fit: contain;
+	border-radius: 6px;
+	background: #f4f4f4;
+	flex-shrink: 0;
+}
+
+.cart-item-body { flex: 1; min-width: 0; }
+
+.cart-item-name {
+	font-family: Montserrat, sans-serif;
+	font-weight: var(--bold);
+	font-size: 15px;
+	line-height: 18px;
+	color: var(--text);
+	margin: 0;
+}
+
+.cart-item-size {
+	font-size: 14px;
+	font-style: italic;
+	color: var(--muted);
+	margin: .25rem 0 0;
+}
+
+.cart-item-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-top: .5rem;
+}
+
+/* Manba: .change-quantity — 30x30 doira, orqasida --color ranguning
+   0.2 xiralikdagi "yostiqchasi" (::before qatlami) */
+
+.qty {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.qty button {
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+	border: none;
+	background: 0 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	position: relative;
+	z-index: 0;
+	cursor: pointer;
+	color: var(--red);
+	font-size: 15px;
+	font-weight: 700;
+}
+
+.qty button::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: 50%;
+	background: var(--red);
+	opacity: .2;
+	z-index: -1;
+}
+
+.qty span {
+	min-width: 16px;
+	text-align: center;
+	font-family: Montserrat, sans-serif;
+	font-weight: var(--bold);
+	font-size: 16px;
+	color: var(--text);
+}
+
+.cart-item-price {
+	font-family: Montserrat, sans-serif;
+	font-weight: var(--bold);
+	font-size: 16px;
+	line-height: 20px;
+	text-align: right;
+	color: var(--text);
+}
+
+/* --- Jami va tugma --- */
+/* Manba: .total .sum-num (22/27 bold) va .checkoutBtn (40px, radius-big) */
+
+.cart-foot {
+	flex: 0 0 auto;
+	position: sticky;
+	bottom: 0;
+	background: #fff;
+	padding: .75rem 1.5rem 1rem;
+}
+
+.cart-total {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	padding-top: .75rem;
+	margin-bottom: .75rem;
+}
+
+.cart-total span {
+	font-family: Montserrat, sans-serif;
+	font-weight: var(--bold);
+	font-size: 15px;
+	color: var(--text);
+}
+
+.cart-total b {
+	font-family: Montserrat, sans-serif;
+	font-weight: var(--bold);
+	font-size: 22px;
+	line-height: 27px;
+	color: var(--text);
+}
+
+.order-submit {
+	width: 100%;
+	height: 40px;
+	border-radius: var(--radius-big);
+	border: none;
+	background: var(--red);
+	color: #fff;
+	font-family: Montserrat, sans-serif;
+	font-weight: var(--bold);
+	font-size: var(--font-16, 16px);
+	letter-spacing: 1px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	margin: 0 auto;
+}
+
+.order-submit:hover { background: #a5081f; }
+.order-submit:disabled { opacity: .6; cursor: default; }
+
+/* ≤749px: basket.css — to'liq kenglik */
+@media (max-width: 749px) {
+	.cart-drawer { width: 100%; right: -100%; }
+}
+
+/* ============================================================
+   BUYURTMA MODALI (manzil formasi)
+   Manba: startorder.css — .startorder-card { width: 543px;
+   border-radius: var(--radius-big) } .startOrder.zindex { z-index: 1700 }
+   ============================================================ */
+
+.order-modal {
+	position: fixed;
+	inset: 0;
+	z-index: 1700;
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	padding: 50px 16px;
+	overflow-y: auto;
+	visibility: hidden;
+}
+
+.order-modal.is-open { visibility: visible; }
+
+.order-card {
+	width: 100%;
+	max-width: 543px;
+	background: #fff;
+	border-radius: var(--radius-big);
+	border-width: 0;
+	position: relative;
+	padding: 1.5rem;
+	animation-duration: .8s;
+	animation-fill-mode: both;
+	display: none;
+}
+
+.order-modal.is-open .order-card {
+	display: block;
+	animation-name: menuBounceInDown;
+}
+
+/* Spetsifiklik yuqoridagi qoidadan past bo'lmasligi shart — aks holda
+   yopish animatsiyasi almashmaydi va modal umuman yopilmay qoladi. */
+.order-modal.is-open .order-card.is-closing { animation-name: menuBounceOutUp; }
+
+.order-close {
+	position: absolute;
+	top: 20px;
+	right: 20px;
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+	border: none;
+	background: #ECECEC;
+	color: #171717;
+	font-size: 14px;
+	cursor: pointer;
+}
+
+.order-title {
+	font-family: Montserrat, sans-serif;
+	font-weight: var(--bold);
+	font-size: 20px;
+	line-height: 24px;
+	text-align: center;
+	color: var(--text);
+	margin: 0 0 20px;
+}
+
+/* --- Xarita --- */
+/* Manba: startorder.css — .startOrderMap { height: 200px; border-radius: 8px } */
+
+.order-map-wrap { margin-bottom: 14px; }
+
+.order-map {
+	width: 100%;
+	height: 200px;
+	border-radius: 8px;
+	background: #f1f1f1;
+	z-index: 0;
+}
+
+.order-map-hint {
+	font-size: 12px;
+	color: var(--muted);
+	margin: 6px 0 0;
+	text-align: center;
+}
+
+.order-field { margin-bottom: 14px; }
+
+.order-field label {
+	display: block;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--muted);
+	margin-bottom: 6px;
+}
+
+/* Manba: .form-control.startorder-input — height 48px, padding-left 32px */
+
+.order-field input,
+.order-field textarea {
+	width: 100%;
+	height: 48px;
+	border: 1px solid #dcdcdc;
+	border-radius: 8px;
+	padding: 0 14px;
+	font: inherit;
+	font-size: 15px;
+	background: #fff;
+	color: var(--text);
+}
+
+.order-field input:focus,
+.order-field textarea:focus {
+	outline: none;
+	border-color: var(--red);
+}
+
+.order-field textarea {
+	height: auto;
+	min-height: 72px;
+	padding: 12px 14px;
+	resize: vertical;
+}
+
+.order-row2 {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 12px;
+}
+
+.order-field.invalid input,
+.order-field.invalid textarea { border-color: var(--red); }
+
+.order-error {
+	font-size: 12px;
+	color: var(--red);
+	margin: 4px 0 0;
+	display: none;
+}
+
+.order-field.invalid .order-error { display: block; }
+
+/* Manba: .startorder-btn — height 48px, radius var(--radius-big) */
+
+.order-submit-btn {
+	width: 100%;
+	height: 48px;
+	border-radius: var(--radius-big);
+	border: none;
+	background: var(--red);
+	color: #fff;
+	font-family: Montserrat, sans-serif;
+	font-weight: var(--bold);
+	font-size: 16px;
+	letter-spacing: normal;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	margin-top: 6px;
+}
+
+.order-submit-btn:hover { background: #a5081f; }
+.order-submit-btn:disabled { opacity: .6; cursor: default; }
+
+.order-status {
+	text-align: center;
+	font-size: 13px;
+	margin-top: 10px;
+	color: var(--muted);
+}
+
+.order-status.is-error { color: var(--red); }
+
+.order-success { text-align: center; padding: 12px 0; }
+.order-success-icon { font-size: 48px; margin-bottom: 12px; }
+.order-success h3 { margin: 0 0 8px; }
+.order-success p { color: var(--muted); margin: 0 0 20px; }
+
+@media (max-width: 480px) {
+	.order-modal { padding: 0; align-items: flex-end; }
+	.order-card { border-radius: var(--radius-big) var(--radius-big) 0 0; max-width: 100%; }
+	.order-row2 { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   animate.css 3.7.0 — Daniel Eden — MIT license
+   https://daneden.github.io/animate.css/
+   ============================================================ */
+
+@keyframes menuBounceInDown {
+	0%, 60%, 75%, 90%, to { animation-timing-function: cubic-bezier(.215, .61, .355, 1); }
+	0% { opacity: 0; transform: translate3d(0, -3000px, 0); }
+	60% { opacity: 1; transform: translate3d(0, 25px, 0); }
+	75% { transform: translate3d(0, -10px, 0); }
+	90% { transform: translate3d(0, 5px, 0); }
+	to { transform: translateZ(0); }
+}
+
+@keyframes menuBounceOutUp {
+	20% { transform: translate3d(0, -10px, 0); }
+	40%, 45% { opacity: 1; transform: translate3d(0, 20px, 0); }
+	to { opacity: 0; transform: translate3d(0, -2000px, 0); }
+}

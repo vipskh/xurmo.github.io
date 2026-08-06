@@ -7,6 +7,10 @@
 	<meta name="description" content="Restoran menyusi">
 	<link rel="stylesheet" href="css/style.css">
 	<link rel="stylesheet" href="css/theme-premium.css">
+	<link rel="stylesheet" href="css/order.css">
+	<!-- Xarita: Leaflet 1.9.4 (BSD-2) + OpenStreetMap plitkalari — API kalit talab qilmaydi -->
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+		integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 	<link rel="icon" href="favicon.svg" type="image/svg+xml">
 	<script>
 		// Mavzu sahifa chizilishidan oldin qo'yiladi — "sakrash" bo'lmasligi uchun.
@@ -28,6 +32,9 @@
 			<a href="?lang=ru" data-lang="ru">RU</a>
 			<a href="?lang=en" data-lang="en">EN</a>
 			<button type="button" class="theme-toggle" id="theme-toggle" title="Dizaynni almashtirish">◑</button>
+			<button type="button" class="cart-btn" id="cart-btn" title="Savatcha">
+				🛒<span class="cart-count" id="cart-count" hidden>0</span>
+			</button>
 		</nav>
 	</div>
 </header>
@@ -76,8 +83,12 @@
 	</div>
 </footer>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+	integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script type="module">
 	import { getCategories, getProducts, imageUrl } from './js/appwrite.js';
+	import * as cart from './js/cart.js';
+	import { initOrderUI } from './js/order-ui.js';
 
 	const LANGS = ['uz', 'ru', 'en'];
 	const params = new URLSearchParams(location.search);
@@ -133,6 +144,9 @@
 	const groupsEl = document.getElementById('groups');
 	const loadingEl = document.getElementById('loading');
 
+	const orderUI = initOrderUI(lang);
+	document.getElementById('cart-btn').addEventListener('click', orderUI.openDrawer);
+
 	try {
 		const [categories, products] = await Promise.all([
 			getCategories(),
@@ -169,19 +183,49 @@
 			}));
 			if (uncategorized.length) groups.push({ id: 'other', title: T.other, items: uncategorized });
 
-			const card = (p) => `
+			// O'lchamlar JSON matnda saqlanadi. Buzuq bo'lsa e'tiborsiz qoldiriladi —
+			// mahsulot oddiy bitta narx bilan ko'rinaveradi.
+			const parseSizes = (raw) => {
+				if (!raw) return [];
+				try {
+					const list = JSON.parse(raw);
+					return Array.isArray(list)
+						? list.filter((s) => s && s.label && Number.isFinite(Number(s.price)))
+						: [];
+				} catch { return []; }
+			};
+
+			const card = (p) => {
+				const sizes = parseSizes(p.sizes);
+				const startPrice = sizes.length ? Number(sizes[0].price) : p.price;
+
+				return `
 				<article class="card" data-name="${esc((p.name_uz + ' ' + p.name_ru + ' ' + p.name_en).toLowerCase())}">
 					<div class="card-img">
 						${p.image
 							? `<img src="${imageUrl(p.image)}" alt="${esc(t(p, 'name'))}" loading="lazy">`
 							: '<span class="no-photo">🍔</span>'}
+						${p.badge ? `<span class="card-badge">${esc(p.badge)}</span>` : ''}
 					</div>
 					<div class="card-body">
 						<h3 class="card-name">${esc(t(p, 'name'))}</h3>
 						${t(p, 'desc') ? `<p class="card-desc">${esc(t(p, 'desc'))}</p>` : ''}
-						<p class="card-price">${money(p.price)} <span>so‘m</span></p>
+						${sizes.length ? `
+						<div class="size-row">
+							${sizes.map((s, i) => `
+								<button type="button" class="size-btn${i === 0 ? ' is-active' : ''}"
+									data-price="${Number(s.price)}">${esc(s.label)}</button>`).join('')}
+						</div>` : ''}
+						<p class="card-price">${money(startPrice)} <span>so‘m</span></p>
+						<button type="button" class="card-add"
+							data-id="${esc(p.$id)}"
+							data-name="${esc(t(p, 'name'))}"
+							data-price="${Number(startPrice)}"
+							data-image="${p.image ? esc(imageUrl(p.image)) : ''}"
+							${sizes.length ? `data-size="${esc(sizes[0].label)}"` : ''}>${esc(orderUI.addLabel)}</button>
 					</div>
 				</article>`;
+			};
 
 			groupsEl.innerHTML = groups.map((g) => `
 				<section class="cat-block" id="cat-${g.id}">
@@ -194,6 +238,44 @@
 		groupsEl.innerHTML = `<p class="empty">${esc(T.error)}</p>`;
 		console.error(err);
 	}
+
+	// Savatchaga qo'shish
+	groupsEl.addEventListener('click', (e) => {
+		const add = e.target.closest('.card-add');
+		if (!add) return;
+
+		cart.addItem({
+			id: add.dataset.id,
+			name: add.dataset.name,
+			price: Number(add.dataset.price),
+			image: add.dataset.image || null,
+			sizeLabel: add.dataset.size || null,
+		});
+
+		add.classList.add('is-added');
+		add.textContent = orderUI.addedLabel;
+		setTimeout(() => {
+			add.classList.remove('is-added');
+			add.textContent = orderUI.addLabel;
+		}, 1200);
+	});
+
+	// O'lcham tugmasi bosilganda narx almashadi
+	groupsEl.addEventListener('click', (e) => {
+		const btn = e.target.closest('.size-btn');
+		if (!btn) return;
+
+		const row = btn.closest('.size-row');
+		row.querySelectorAll('.size-btn').forEach((b) => b.classList.remove('is-active'));
+		btn.classList.add('is-active');
+
+		const price = btn.closest('.card').querySelector('.card-price');
+		price.innerHTML = `${money(btn.dataset.price)} <span>so‘m</span>`;
+
+		const add = btn.closest('.card').querySelector('.card-add');
+		add.dataset.price = btn.dataset.price;
+		add.dataset.size = btn.textContent;
+	});
 
 	// Qidiruv — sahifa yuklangandan keyin ishlaydi
 	const input = document.getElementById('search');

@@ -79,11 +79,33 @@
 			</div>
 			<div class="form-col">
 				<fieldset>
+					<legend>O‘lchamlar (pizza kabi mahsulotlar uchun)</legend>
+					<div id="sizes-list"></div>
+					<button type="button" class="btn btn-sm" id="add-size">+ O‘lcham qo‘shish</button>
+					<small class="muted">
+						Bo‘sh qoldirsangiz mahsulot bitta narx bilan ko‘rinadi.
+						O‘lcham qo‘shsangiz, saytda tugmalar chiqadi va narx tanlovga qarab almashadi.
+					</small>
+				</fieldset>
+
+				<fieldset>
 					<legend>Sozlamalar</legend>
 					<label>Kategoriya
 						<select name="category_id" id="form-cat"><option value="">— tanlanmagan —</option></select>
 					</label>
-					<label>Narxi (so‘m) <input type="number" name="price" min="0" step="500" value="0"></label>
+					<label>Belgi
+						<select name="badge">
+							<option value="">— yo‘q —</option>
+							<option value="Bestseller">Bestseller</option>
+							<option value="Yangi">Yangi</option>
+							<option value="Achchiq">Achchiq</option>
+							<option value="Aksiya">Aksiya</option>
+							<option value="Katta">Katta</option>
+						</select>
+					</label>
+					<label>Narxi (so‘m) <input type="number" name="price" min="0" step="500" value="0">
+						<small class="muted">O‘lchamlar qo‘shilgan bo‘lsa bu narx ishlatilmaydi</small>
+					</label>
 					<label>Tartib raqami
 						<input type="number" name="sort" value="0">
 						<small class="muted">Kichik raqam yuqorida turadi</small>
@@ -127,6 +149,18 @@
 
 	const catName = (id) => categories.find((c) => c.$id === id)?.name_uz || '—';
 
+	// O'lchamli mahsulotda eng arzonidan boshlab ko'rsatamiz
+	function priceLabel(p) {
+		try {
+			const list = p.sizes ? JSON.parse(p.sizes) : [];
+			if (Array.isArray(list) && list.length) {
+				const min = Math.min(...list.map((s) => Number(s.price) || 0));
+				return `${money(min)}<br><small class="muted">${list.length} o‘lcham</small>`;
+			}
+		} catch { /* buzuq ma'lumot — oddiy narx ko'rsatamiz */ }
+		return money(p.price);
+	}
+
 	async function load() {
 		[categories, products] = await Promise.all([getCategories(), getProducts()]);
 		$('loading').hidden = true;
@@ -151,10 +185,11 @@
 					: '<span class="thumb thumb-empty">—</span>'}</td>
 				<td>
 					<strong>${esc(p.name_uz)}</strong>
+					${p.badge ? ` <span class="badge badge-info">${esc(p.badge)}</span>` : ''}
 					${p.desc_uz ? `<br><small class="muted">${esc(p.desc_uz)}</small>` : ''}
 				</td>
 				<td>${esc(catName(p.category_id))}</td>
-				<td class="col-price">${money(p.price)}</td>
+				<td class="col-price">${priceLabel(p)}</td>
 				<td class="col-sort">${p.sort}</td>
 				<td class="col-status">
 					<button type="button" class="badge ${p.is_active ? 'badge-ok' : 'badge-off'}"
@@ -186,6 +221,43 @@
 	}
 	['f-q', 'f-cat', 'f-status'].forEach((id) => $(id).addEventListener('input', applyFilter));
 
+	// --- O'lchamlar tahrirlagichi ---
+
+	function sizeRow(label = '', price = '') {
+		const div = document.createElement('div');
+		div.className = 'size-edit-row';
+		div.innerHTML = `
+			<input type="text" class="size-label" placeholder="Nomi (masalan: 25 sm)" value="${esc(label)}">
+			<input type="number" class="size-price" placeholder="Narxi" min="0" step="500" value="${esc(price)}">
+			<button type="button" class="btn btn-sm btn-danger size-remove" title="O‘chirish">✕</button>`;
+		return div;
+	}
+
+	$('add-size').addEventListener('click', () => $('sizes-list').append(sizeRow()));
+
+	$('sizes-list').addEventListener('click', (e) => {
+		if (e.target.closest('.size-remove')) e.target.closest('.size-edit-row').remove();
+	});
+
+	// Tahrirlagichdan JSON matn yasaymiz. Nomi yoki narxi bo'sh qatorlar tashlab ketiladi.
+	function collectSizes() {
+		const rows = [...$('sizes-list').querySelectorAll('.size-edit-row')];
+		const list = rows.map((r) => ({
+			label: r.querySelector('.size-label').value.trim(),
+			price: parseInt(r.querySelector('.size-price').value, 10) || 0,
+		})).filter((s) => s.label && s.price > 0);
+		return list.length ? JSON.stringify(list) : '';
+	}
+
+	function fillSizes(raw) {
+		const list = $('sizes-list');
+		list.innerHTML = '';
+		if (!raw) return;
+		try {
+			JSON.parse(raw).forEach((s) => list.append(sizeRow(s.label, s.price)));
+		} catch { /* buzuq ma'lumot — bo'sh qoldiramiz */ }
+	}
+
 	// --- Forma ---
 
 	function openForm(product) {
@@ -200,7 +272,9 @@
 		f.price.value = product?.price ?? 0;
 		f.sort.value = product?.sort ?? 0;
 		f.category_id.value = product?.category_id || '';
+		f.badge.value = product?.badge || '';
 		f.is_active.checked = product ? product.is_active : true;
+		fillSizes(product?.sizes);
 
 		const hasImg = Boolean(product?.image);
 		$('img-preview').hidden = !hasImg;
@@ -255,6 +329,8 @@
 				image,
 				is_active: f.is_active.checked,
 				sort: parseInt(f.sort.value, 10) || 0,
+				sizes: collectSizes(),
+				badge: f.badge.value,
 			};
 
 			if (editing) {

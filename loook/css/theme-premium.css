@@ -367,6 +367,35 @@
 
 [data-theme="premium"] .card-price span { color: var(--dim); }
 
+/* O'lcham tugmalari va belgi — premium ranglarda */
+
+[data-theme="premium"] .card-badge {
+	background: transparent;
+	border: 1px solid var(--gold);
+	color: var(--gold);
+	border-radius: 2px;
+	letter-spacing: .18em;
+	backdrop-filter: blur(4px);
+}
+
+[data-theme="premium"] .size-btn {
+	background: transparent;
+	border: 1px solid rgba(201, 168, 76, .25);
+	border-radius: 2px;
+	color: var(--dim);
+}
+
+[data-theme="premium"] .size-btn:hover {
+	border-color: var(--gold);
+	color: var(--gold);
+}
+
+[data-theme="premium"] .size-btn.is-active {
+	background: var(--gold);
+	border-color: var(--gold);
+	color: var(--ink);
+}
+
 /* --- Bo'sh holat --- */
 
 [data-theme="premium"] .empty {
