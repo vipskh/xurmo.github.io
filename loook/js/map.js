@@ -40,7 +40,22 @@ const reverse = async (lat, lon) => {
 export function initMap(el, onPick) {
 	if (typeof L === 'undefined') return null;
 
-	map = L.map(el, { zoomControl: true }).setView(DEFAULT_CENTER, DEFAULT_ZOOM);
+	// Telefonda xarita forma tepasida turadi. Surish yoqilgan bo'lsa,
+	// foydalanuvchi sahifani surmoqchi bo'lib xarita ustidan barmog'ini
+	// tortadi — sahifa emas, xarita suriladi va forma "qotib qolgandek"
+	// tuyuladi. Shuning uchun sensorli ekranda surish birinchi tegishdan
+	// keyin yoqiladi: tegmaguncha barmoq sahifani suradi.
+	const touch = matchMedia('(hover: none)').matches;
+
+	map = L.map(el, {
+		zoomControl: true,
+		dragging: !touch,
+		tap: false,
+	}).setView(DEFAULT_CENTER, DEFAULT_ZOOM);
+
+	if (touch) {
+		el.addEventListener('click', () => map.dragging.enable(), { once: true });
+	}
 
 	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 		maxZoom: 19,

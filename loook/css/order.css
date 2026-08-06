@@ -512,9 +512,23 @@ body.no-scroll { overflow: hidden; }
 .order-success h3 { margin: 0 0 8px; }
 .order-success p { color: var(--muted); margin: 0 0 20px; }
 
+/* Telefonda modal butun ekranni egallaydi va tepadan pastga surilади.
+   DIQQAT: bu yerda `display: flex` ATAYLAB block'ga almashtirilgan.
+   Flex konteynerda element konteynerdan baland bo'lsa, align-items
+   (flex-end yoki center) uning tepasini scroll maydonidan tashqarida
+   qoldiradi — foydalanuvchi yuqoriga surib xaritaga yeta olmaydi. */
 @media (max-width: 480px) {
-	.order-modal { padding: 0; align-items: flex-end; }
-	.order-card { border-radius: var(--radius-big) var(--radius-big) 0 0; max-width: 100%; }
+	.order-modal {
+		display: block;
+		padding: 0;
+	}
+
+	.order-modal.is-open .order-card {
+		max-width: 100%;
+		min-height: 100%;
+		border-radius: 0;
+	}
+
 	.order-row2 { grid-template-columns: 1fr; }
 }
 
