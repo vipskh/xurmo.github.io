@@ -623,14 +623,33 @@ $('set-import').addEventListener('click', () => {
 	inp.click();
 });
 
-$('set-logout').addEventListener('click', async () => {
+// Chiqish — bitta joyda, ikkala tugma ham shuni chaqiradi
+const signOut = async () => {
 	clearTimeout(lockTimer);
 	unsubscribe?.();
+	unsubscribe = null;
+
 	await store.logout().catch(() => {});
+
 	user = null; isOwner = false; openId = null;
 	db = { contacts: [], notes: [], cur: db.cur };
+
+	// Qulf va ochiq oynalar qolib ketmasin — aks holda kirish shakli
+	// ustida ko'rinmas qatlam qolib, yozib bo'lmaydi
+	$('lock').hidden = true;
+	$('lock-pass').value = '';
+	closeSheets();
+
+	$('detail-inner').hidden = true;
+	$('pane-empty').hidden = false;
+	$('detail-pane').classList.remove('is-open');
+
 	show('login');
-});
+	$('l-pass').value = '';
+	$('l-email').focus();
+};
+
+$('set-logout').addEventListener('click', signOut);
 
 // Qulflash daqiqasi — faqat ega o'zgartiradi, telefonidan ham
 $('set-lock').addEventListener('change', async () => {
@@ -822,8 +841,13 @@ $('login-form').addEventListener('submit', async (e) => {
 let lockTimer = null;
 
 const doLock = () => {
+	// Kirish ekranida qulflashning ma'nosi yo'q — u yerda allaqachon
+	// parol so'ralyapti. Aks holda qulf oynasi kirish shaklining USTIGA
+	// chiqib, maydonlarga yozib bo'lmay qolardi (ikkalasi ham oq).
+	if (!user) return;
 	if ($('lock').hidden === false) return;
-	$('lock-who').textContent = user?.name || user?.email || '';
+
+	$('lock-who').textContent = user.name || user.email || '';
 	$('lock-pass').value = '';
 	$('lock-err').hidden = true;
 	$('lock').hidden = false;
@@ -832,7 +856,7 @@ const doLock = () => {
 
 const startLockTimer = () => {
 	clearTimeout(lockTimer);
-	if (!lockMinutes) return;                 // 0 = qulflanmaydi
+	if (!user || !lockMinutes) return;         // chiqilgan yoki 0 = qulflanmaydi
 	lockTimer = setTimeout(doLock, lockMinutes * 60000);
 };
 
@@ -870,16 +894,9 @@ $('lock-form').addEventListener('submit', async (e) => {
 	}
 });
 
-// Boshqa kassir kelganda — butunlay chiqib, yangisi kiradi
-$('lock-switch').addEventListener('click', async () => {
-	clearTimeout(lockTimer);
-	unsubscribe?.();
-	await store.logout().catch(() => {});
-	user = null; isOwner = false; openId = null;
-	db = { contacts: [], notes: [], cur: db.cur };
-	$('lock').hidden = true;
-	show('login');
-});
+// Boshqa kassir kelganda — butunlay chiqib, yangisi kiradi.
+// signOut pastda e'lon qilingan, lekin bosilganda allaqachon mavjud.
+$('lock-switch').addEventListener('click', () => signOut());
 
 // ---------- Ishga tushirish ----------
 
