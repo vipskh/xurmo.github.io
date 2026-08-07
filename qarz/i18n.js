@@ -72,6 +72,10 @@ const DICT = {
 
 		// Eslatmalar
 		newNote: '+ Yangi eslatma', noNotes: 'Eslatma yo‘q.', notePrompt: 'Eslatma:',
+
+		// Mehmon rejimi
+		guestMode: 'Sinov rejimi', tryFree: 'Kirishsiz sinab ko‘rish',
+		guestNote: 'Sinov rejimi: ma‘lumot faqat shu brauzerda saqlanadi. Kirsangiz serverga o‘tadi va istalgan qurilmadan ko‘rinadi.',
 	},
 
 	ru: {
@@ -129,6 +133,9 @@ const DICT = {
 		restored: 'Восстановлено.', fileFail: 'Файл не прочитан',
 
 		newNote: '+ Новая заметка', noNotes: 'Заметок нет.', notePrompt: 'Заметка:',
+
+		guestMode: 'Демо-режим', tryFree: 'Попробовать без входа',
+		guestNote: 'Демо-режим: данные хранятся только в этом браузере. После входа они переедут на сервер.',
 	},
 
 	en: {
@@ -186,6 +193,9 @@ const DICT = {
 		restored: 'Restored.', fileFail: 'Could not read file',
 
 		newNote: '+ New note', noNotes: 'No notes.', notePrompt: 'Note:',
+
+		guestMode: 'Demo mode', tryFree: 'Try without signing in',
+		guestNote: 'Demo mode: data stays in this browser only. Sign in to move it to the server.',
 	},
 };
 

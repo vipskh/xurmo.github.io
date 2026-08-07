@@ -32,6 +32,10 @@
 	</nav>
 
 	<div class="nav-right">
+		<span class="guest-tag" id="guest-tag" hidden>
+			<span data-t="guestMode">Sinov rejimi</span>
+			<button class="link-inline" id="guest-login" data-t="signIn">Kirish</button>
+		</span>
 		<span class="who" id="nav-who"></span>
 		<button class="ico" data-calc title="Kalkulyator">
 			<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h4M9 6v4M14 8h3M14 14h3M7 14h4M7 17h4"/></svg>
@@ -64,6 +68,7 @@
 		</form>
 
 		<button class="link-btn" id="l-switch" data-t="noAccount">Hisobingiz yo‘qmi? Ro‘yxatdan o‘tish</button>
+		<button class="link-btn" id="l-guest" data-t="tryFree">Kirishsiz sinab ko‘rish</button>
 	</div>
 </section>
 
@@ -225,7 +230,7 @@
 			<button class="set-row as-btn danger" id="set-logout"><span data-t="logout">Chiqish</span><span class="chev">›</span></button>
 		</div>
 
-		<p class="foot-note" data-t="dataNote">Ma'lumot serverda saqlanadi.</p>
+		<p class="foot-note" id="foot-note">Ma'lumot serverda saqlanadi.</p>
 	</div>
 </section>
 

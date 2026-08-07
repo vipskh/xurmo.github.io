@@ -451,6 +451,7 @@ $('set-lang').addEventListener('change', () => {
 	renderList(); renderNotes(); renderReports();
 	if (openId) openContact(openId);
 	syncLoginText();
+	syncModeText();
 });
 
 $('set-export').addEventListener('click', () => {
@@ -598,17 +599,42 @@ window.addEventListener('popstate', () => {
 	}
 });
 
-const start = async () => {
-	applyLang();
-	history.pushState(null, '', location.href);
+// Mehmon rejimida foydalanuvchi yo'q — ruxsat berish uchun soxta ID
+// yetarli, chunki ma'lumot serverga umuman bormaydi
+const GUEST_USER = { $id: 'guest', email: '' };
 
-	user = await store.me();
-	if (!user) { show('login'); return; }
+const enterGuest = async () => {
+	store.setGuest(true);
+	user = GUEST_USER;
+	await load();
+};
 
+$('l-guest').addEventListener('click', enterGuest);
+
+// Mehmondan haqiqiy hisobga o'tish
+$('guest-login').addEventListener('click', () => {
+	store.setGuest(false);
+	user = null;
+	openId = null;
+	db = { contacts: [], notes: [], cur: db.cur };
+	show('login');
+});
+
+// Mehmon yoki haqiqiy hisob — qaysi rejimda ekanini ko'rsatuvchi matnlar.
+// Til almashtirilganda ham qayta chaqiriladi.
+const syncModeText = () => {
+	const isGuest = store.guest;
+	$('set-who').textContent = isGuest ? t('guestMode') : (user?.email || '');
+	$('nav-who').textContent = isGuest ? '' : (user?.email || '');
+	$('guest-tag').hidden = !isGuest;
+	$('set-logout').hidden = isGuest;
+	$('foot-note').textContent = t(isGuest ? 'guestNote' : 'dataNote');
+};
+
+const load = async () => {
 	db.cur = localStorage.getItem(CUR_KEY) || '$';
 	$('set-cur').value = db.cur;
-	$('set-who').textContent = user.email;
-	$('nav-who').textContent = user.email;
+	syncModeText();
 
 	$('contact-list').innerHTML = `<p class="loading">${t('loading')}</p>`;
 	show('debts');
@@ -622,6 +648,22 @@ const start = async () => {
 	}
 
 	renderList(); renderNotes(); renderReports();
+};
+
+const start = async () => {
+	applyLang();
+	history.pushState(null, '', location.href);
+
+	user = await store.me();
+	if (user) {
+		store.setGuest(false);
+		await load();
+		return;
+	}
+
+	// Sessiya yo'q — kirish ekranini ko'rsatmasdan darrov sinov rejimiga
+	// o'tamiz. Kirish tepadagi "Kirish" havolasi orqali ochiladi.
+	await enterGuest();
 };
 
 start();

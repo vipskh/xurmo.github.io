@@ -52,6 +52,24 @@ const listAll = async (table, queries = []) => {
 	return out;
 };
 
+// --- Mehmon rejimi ---
+//
+// Kirishsiz sinab ko'rish uchun. Ma'lumot faqat shu brauzerda qoladi —
+// serverga umuman tegmaydi. Shunday qilinishining sababi: sahifa ochiq,
+// kirishsiz hamma bitta serverdagi hisobga tushsa bir-birining yozuvini
+// ko'rar va o'chira olardi.
+
+const GUEST_KEY = 'debtnote-guest';
+
+export let guest = false;
+export const setGuest = (v) => { guest = v; };
+
+const gLoad = () => {
+	try { return JSON.parse(localStorage.getItem(GUEST_KEY)) || []; } catch { return []; }
+};
+const gSave = (contacts) => localStorage.setItem(GUEST_KEY, JSON.stringify(contacts));
+const gid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
 // --- Kirish ---
 
 export const me = async () => {
@@ -85,6 +103,8 @@ const ownerOnly = (userId) => [
 // --- O'qish ---
 
 export const fetchAll = async () => {
+	if (guest) return gLoad();
+
 	const [contacts, entries] = await Promise.all([
 		listAll(CFG.contacts),
 		listAll(CFG.entries),
@@ -114,6 +134,14 @@ export const fetchAll = async () => {
 // --- Yozish ---
 
 export const addContact = async (userId, { name, info }) => {
+	if (guest) {
+		const c = { id: gid(), name, info: info || '', createdAt: Date.now(), entries: [] };
+		const all = gLoad();
+		all.push(c);
+		gSave(all);
+		return c;
+	}
+
 	const row = await request('POST', `${base}/${CFG.contacts}/rows`, {
 		rowId: 'unique()',
 		data: { name, info: info || '' },
@@ -122,10 +150,21 @@ export const addContact = async (userId, { name, info }) => {
 	return { id: row.$id, name: row.name, info: row.info || '', createdAt: Date.parse(row.$createdAt), entries: [] };
 };
 
-export const updateContact = (id, { name, info }) =>
-	request('PATCH', `${base}/${CFG.contacts}/rows/${id}`, { data: { name, info: info || '' } });
+export const updateContact = async (id, { name, info }) => {
+	if (guest) {
+		const all = gLoad();
+		const c = all.find((x) => x.id === id);
+		if (c) { c.name = name; c.info = info || ''; gSave(all); }
+		return c;
+	}
+	return request('PATCH', `${base}/${CFG.contacts}/rows/${id}`, { data: { name, info: info || '' } });
+};
 
 export const deleteContact = async (id, entries) => {
+	if (guest) {
+		gSave(gLoad().filter((c) => c.id !== id));
+		return;
+	}
 	// Avval yozuvlar, keyin kontakt — aks holda egasiz yozuvlar qoladi
 	await Promise.all(entries.map((e) =>
 		request('DELETE', `${base}/${CFG.entries}/rows/${e.id}`).catch(() => {})));
@@ -133,6 +172,14 @@ export const deleteContact = async (id, entries) => {
 };
 
 export const addEntry = async (userId, contactId, { kind, amount, note }) => {
+	if (guest) {
+		const e = { id: gid(), kind, amount, note: note || '', at: Date.now() };
+		const all = gLoad();
+		const c = all.find((x) => x.id === contactId);
+		if (c) { c.entries.push(e); gSave(all); }
+		return e;
+	}
+
 	const row = await request('POST', `${base}/${CFG.entries}/rows`, {
 		rowId: 'unique()',
 		data: { contact_id: contactId, kind, amount, note: note || '' },
