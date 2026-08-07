@@ -113,6 +113,30 @@ const displayName = (c) => {
 	return d.length >= 4 ? `${c.name}${d.slice(-4)}` : c.name;
 };
 
+// Bir xil odam ikki marta qo'shilib qolmasin.
+//
+// Telefon oxirgi 9 raqami bo'yicha solishtiriladi: "+998 90 018 05 09",
+// "998900180509" va "900180509" — bir xil odam. Mamlakat kodi bor-yo'qligi
+// va bo'sh joylar farq qilmaydi.
+const phoneKey = (info) => {
+	const d = digits(info);
+	return d.length >= 9 ? d.slice(-9) : '';
+};
+
+const findDuplicate = ({ name, info }, skipId = null) => {
+	const key = phoneKey(info);
+	if (key) {
+		const byPhone = db.contacts.find((c) => c.id !== skipId && phoneKey(c.info) === key);
+		if (byPhone) return { contact: byPhone, reason: 'phone' };
+	}
+
+	const lower = name.trim().toLowerCase();
+	const byName = db.contacts.find((c) => c.id !== skipId && c.name.trim().toLowerCase() === lower);
+	if (byName) return { contact: byName, reason: 'name' };
+
+	return null;
+};
+
 const matches = (c, q) => {
 	if (!q) return true;
 	if (displayName(c).toLowerCase().includes(q)) return true;   // "sardor0509"
@@ -244,10 +268,28 @@ enterSaves('c-note');
 
 document.querySelector('[data-new-contact]').addEventListener('click', () => {
 	['n-name', 'n-info', 'n-amount', 'n-note'].forEach((id) => ($(id).value = ''));
+	$('n-err').hidden = true;
+	$('n-open-dup').hidden = true;
 	setSeg('n-seg', 'debt');
 	openSheet('newsheet');
 	$('n-name').focus();
 });
+
+// Takrorlanish topilganda — mavjud kontaktni ochish
+$('n-open-dup').addEventListener('click', () => {
+	const id = $('n-open-dup').dataset.id;
+	closeSheets();
+	show('debts');
+	openContact(id);
+});
+
+// Ma'lumot o'zgartirilsa ogohlantirish yo'qoladi
+for (const id of ['n-name', 'n-info']) {
+	$(id).addEventListener('input', () => {
+		$('n-err').hidden = true;
+		$('n-open-dup').hidden = true;
+	});
+}
 
 $('n-save').addEventListener('click', async () => {
 	const name = $('n-name').value.trim();
@@ -256,6 +298,24 @@ $('n-save').addEventListener('click', async () => {
 	if (!amount) { $('n-amount').focus(); return; }
 
 	const info = $('n-info').value.trim();
+	const nErr = $('n-err');
+	nErr.hidden = true;
+
+	// Bir xil odamni ikki marta qo'shmaslik
+	const dup = findDuplicate({ name, info });
+	if (dup) {
+		if (dup.reason === 'phone') {
+			// Telefon aynan mos — bu o'sha odam. Qo'shmaymiz.
+			nErr.textContent = `${t('dupPhone')}: ${dup.contact.name}`;
+			nErr.hidden = false;
+			$('n-open-dup').hidden = false;
+			$('n-open-dup').dataset.id = dup.contact.id;
+			return;
+		}
+		// Ism bir xil, telefon boshqa — haqiqatan boshqa odam bo'lishi mumkin
+		if (!confirm(`${t('dupName')}: ${dup.contact.name}\n\n${t('dupAsk')}`)) return;
+	}
+
 	const entry = { kind: segKind('n-seg'), amount, note: $('n-note').value.trim() };
 
 	// Kontakt yaratilishi serverdan ID talab qiladi — bu yerda kutamiz,
@@ -290,6 +350,14 @@ $('ctx-edit').addEventListener('click', async () => {
 	if (name === null) return;
 	const info = prompt(`${t('information')}:`, c.info || '');
 	if (info === null) return;
+
+	// Tahrirlashda ham boshqa kontakt bilan to'qnashmasin
+	const dup = findDuplicate({ name: name.trim() || c.name, info: info.trim() }, c.id);
+	if (dup?.reason === 'phone') {
+		alert(`${t('dupPhone')}: ${dup.contact.name}`);
+		return;
+	}
+
 	closeSheets();
 
 	const before = { name: c.name, info: c.info };

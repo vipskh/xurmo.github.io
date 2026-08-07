@@ -94,6 +94,10 @@ const DICT = {
 		myActivity: 'Mening ishim', myReports: 'Mening hisobotim',
 		dayClosed: 'Qarzdan qutildi', closedBadge: 'YOPILDI',
 		closedToday: 'Qarzini butunlay yopdi:',
+		dupPhone: 'Bu telefon raqami allaqachon bor',
+		dupName: 'Bu ismda kontakt bor',
+		dupAsk: 'Baribir yangi kontakt qo‘shilsinmi?',
+		openExisting: 'Mavjud kontaktni ochish',
 	},
 
 	ru: {
@@ -171,6 +175,10 @@ const DICT = {
 		myActivity: 'Моя работа', myReports: 'Мой отчёт',
 		dayClosed: 'Долг закрыт', closedBadge: 'ЗАКРЫТ',
 		closedToday: 'Полностью погасили долг:',
+		dupPhone: 'Этот номер уже есть',
+		dupName: 'Контакт с таким именем уже есть',
+		dupAsk: 'Всё равно добавить нового?',
+		openExisting: 'Открыть существующий контакт',
 	},
 
 	en: {
@@ -248,6 +256,10 @@ const DICT = {
 		myActivity: 'My activity', myReports: 'My report',
 		dayClosed: 'Debts cleared', closedBadge: 'CLEARED',
 		closedToday: 'Fully paid off:',
+		dupPhone: 'This phone number already exists',
+		dupName: 'A contact with this name exists',
+		dupAsk: 'Add a new one anyway?',
+		openExisting: 'Open existing contact',
 	},
 };
 
