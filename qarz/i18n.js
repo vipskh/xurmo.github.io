@@ -98,6 +98,7 @@ const DICT = {
 		dupName: 'Bu ismda kontakt bor',
 		dupAsk: 'Baribir yangi kontakt qo‘shilsinmi?',
 		openExisting: 'Mavjud kontaktni ochish',
+		needSignIn: 'Qaytadan kirish kerak — pastdagi tugmani bosing',
 	},
 
 	ru: {
@@ -179,6 +180,7 @@ const DICT = {
 		dupName: 'Контакт с таким именем уже есть',
 		dupAsk: 'Всё равно добавить нового?',
 		openExisting: 'Открыть существующий контакт',
+		needSignIn: 'Нужно войти заново — нажмите кнопку ниже',
 	},
 
 	en: {
@@ -260,6 +262,7 @@ const DICT = {
 		dupName: 'A contact with this name exists',
 		dupAsk: 'Add a new one anyway?',
 		openExisting: 'Open existing contact',
+		needSignIn: 'Please sign in again — use the button below',
 	},
 };
 

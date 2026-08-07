@@ -943,18 +943,23 @@ $('lock-form').addEventListener('submit', async (e) => {
 	err.hidden = true;
 
 	try {
-		if (await store.verifyPassword($('lock-pass').value)) {
+		const ok = await store.verifyPassword($('lock-pass').value);
+
+		if (ok === true) {
 			$('lock').hidden = true;
 			$('lock-pass').value = '';
 			startLockTimer();
+		} else if (ok === null) {
+			// Xesh yo'q (brauzer ma'lumoti tozalangan) — parolni bu yerda
+			// tekshirib bo'lmaydi, to'liq kirish kerak
+			err.textContent = t('needSignIn');
+			err.hidden = false;
 		} else {
 			err.textContent = t('badPass');
 			err.hidden = false;
 			$('lock-pass').select();
 		}
 	} catch (ex) {
-		// Tarmoq uzilgan bo'lsa — sababini aytamiz, "parol noto'g'ri"
-		// deb chalg'itmaymiz
 		err.textContent = ex.message;
 		err.hidden = false;
 	} finally {

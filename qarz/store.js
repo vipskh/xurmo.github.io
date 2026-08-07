@@ -76,32 +76,62 @@ export const account = async () => {
 	}
 };
 
-export const login = (email, password) =>
-	request('POST', `${CFG.endpoint}/account/sessions/email`, { email, password });
+export const login = async (email, password) => {
+	const s = await request('POST', `${CFG.endpoint}/account/sessions/email`, { email, password });
+	await rememberForLock(password);      // qulfni ochish uchun
+	return s;
+};
 
-// Qulf ekrani uchun: parol to'g'rimi, sessiyani buzmasdan tekshirish.
+// --- Qulf ekrani uchun parol tekshiruvi ---
 //
-// Oddiy yo'l — qayta kirish — ishlamaydi: Appwrite sessiya ochiq turganda
-// yangi sessiya yaratishga ruxsat bermaydi (user_session_already_exists),
-// shuning uchun to'g'ri parol ham rad etilardi.
+// Serverga murojaat qilinmaydi. Ikkita yo'l sinab ko'rildi va ikkalasi
+// ham yaramadi:
+//   1) qayta kirish — sessiya ochiq turganda Appwrite ruxsat bermaydi
+//   2) parolni o'ziga almashtirish — 2-3 urinishdan keyin Appwrite
+//      cheklab qo'yadi (429) va TO'G'RI parol ham o'tmay qoladi
 //
-// Parolni O'ZIGA almashtirish so'rovi esa `oldPassword` ni tekshiradi:
-// to'g'ri bo'lsa o'tadi, noto'g'ri bo'lsa user_invalid_credentials.
-// Parol o'zgarmaydi, sessiya butun qoladi.
+// Qulf — mahalliy himoya (ekran qarovsiz qolmasin), server chegarasi
+// emas. Shuning uchun kirish paytida paroldan PBKDF2 xeshi olinadi va
+// shu yerda saqlanadi; ochishda faqat shu xesh solishtiriladi.
+// Parolning o'zi hech qayerda saqlanmaydi.
+
+const LOCK_KEY = 'debtnote-lock';
+
+const enc = new TextEncoder();
+const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+
+const derive = async (password, salt) => {
+	const key = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
+	const bits = await crypto.subtle.deriveBits(
+		{ name: 'PBKDF2', salt: enc.encode(salt), iterations: 100000, hash: 'SHA-256' },
+		key, 256
+	);
+	return hex(bits);
+};
+
+const rememberForLock = async (password) => {
+	const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
+	localStorage.setItem(LOCK_KEY, JSON.stringify({ salt, hash: await derive(password, salt) }));
+};
+
+const forgetLock = () => localStorage.removeItem(LOCK_KEY);
+
+// `null` — xesh yo'q (masalan brauzer ma'lumoti tozalangan).
+// Bunday holda chaqiruvchi to'liq kirishni so'raydi.
 export const verifyPassword = async (password) => {
+	const raw = localStorage.getItem(LOCK_KEY);
+	if (!raw) return null;
 	try {
-		await request('PATCH', `${CFG.endpoint}/account/password`, {
-			password, oldPassword: password,
-		});
-		return true;
-	} catch (e) {
-		if (e.type === 'user_invalid_credentials') return false;
-		throw e;   // tarmoq yoki boshqa xato — chaqiruvchi hal qiladi
+		const { salt, hash } = JSON.parse(raw);
+		return (await derive(password, salt)) === hash;
+	} catch {
+		return null;
 	}
 };
 
 export const logout = () => {
 	me = null; team = null; isOwner = false;
+	forgetLock();
 	return request('DELETE', `${CFG.endpoint}/account/sessions/current`);
 };
 
