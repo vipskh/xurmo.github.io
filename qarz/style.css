@@ -1,0 +1,334 @@
+/* Debt Note — brauzer versiyasi.
+   Ranglar va tuzilma mijoz bergan skrinshotlardan olingan. */
+
+:root {
+	--bg: #0a0c0e;
+	--panel: #12151a;
+	--panel-2: #1a1f26;
+	--line: #232a33;
+	--text: #e9edf2;
+	--muted: #8a94a3;
+	--green: #24d16a;
+	--green-tint: #0e2418;
+	--red: #f2545b;
+	--red-tint: #241013;
+	--bar-h: 60px;
+	--tabs-h: 62px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--text);
+	font-family: Montserrat, "Segoe UI", system-ui, sans-serif;
+	font-size: 15px;
+	-webkit-font-smoothing: antialiased;
+}
+
+button, input, select { font: inherit; color: inherit; }
+svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Kompyuterda telefon ilovasi cheksiz cho'zilib ketmasin —
+   o'qishga qulay kenglikda markazda turadi */
+body { max-width: 900px; margin: 0 auto; border-left: 1px solid var(--line); border-right: 1px solid var(--line); min-height: 100vh; }
+
+/* ---------- Ekranlar ---------- */
+
+.screen { display: none; flex-direction: column; min-height: 100vh; }
+.screen.is-on { display: flex; }
+
+.body {
+	flex: 1;
+	padding-bottom: calc(var(--tabs-h) + 20px);
+	overflow-x: hidden;
+}
+.screen.no-nav .body { padding-bottom: 100px; }
+
+/* ---------- Yuqori panel ---------- */
+
+.bar {
+	height: var(--bar-h);
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 0 14px;
+	border-bottom: 1px solid var(--line);
+	position: sticky;
+	top: 0;
+	background: var(--bg);
+	z-index: 20;
+}
+
+.bar-title { font-size: 20px; font-weight: 700; margin: 0; flex: 1; }
+.bar .ico + .bar-title { flex: 1; margin-left: 4px; }
+
+.ico {
+	background: none; border: none; cursor: pointer;
+	width: 40px; height: 40px; padding: 8px;
+	color: var(--text); border-radius: 50%;
+	flex-shrink: 0;
+}
+.ico:hover { background: var(--panel-2); }
+.ico svg { width: 100%; height: 100%; }
+
+.dot-rec { width: 9px; height: 9px; border-radius: 50%; background: var(--red); flex-shrink: 0; }
+
+/* ---------- Qidiruv ---------- */
+
+.searchbar { display: flex; align-items: center; gap: 6px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.searchbar input {
+	flex: 1; background: var(--panel-2); border: 1px solid var(--line);
+	border-radius: 999px; padding: 10px 16px; outline: none;
+}
+.searchbar input:focus { border-color: var(--green); }
+
+/* ---------- Kontakt qatori ---------- */
+
+.contact { display: flex; align-items: center; gap: 14px; padding: 14px 16px; cursor: pointer; }
+.contact:hover { background: var(--panel); }
+
+.ava-wrap { position: relative; flex-shrink: 0; }
+.ava {
+	width: 50px; height: 50px; border-radius: 50%;
+	background: #67717d; color: #fff;
+	display: flex; align-items: center; justify-content: center;
+	font-size: 20px; font-weight: 700;
+}
+.ava-dot {
+	position: absolute; right: 1px; bottom: 1px;
+	width: 12px; height: 12px; border-radius: 50%;
+	background: var(--red); border: 2px solid var(--bg);
+}
+.ava-dot.paid { background: var(--green); }
+
+.c-main { flex: 1; min-width: 0; }
+.c-nm { font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.c-right { text-align: right; flex-shrink: 0; }
+.c-time { font-size: 12px; color: var(--muted); }
+.c-bal { font-size: 17px; font-weight: 700; margin-top: 3px; }
+
+.pos { color: var(--green); }
+.neg { color: var(--red); }
+
+.empty { padding: 60px 20px; text-align: center; color: var(--muted); }
+
+/* ---------- FAB ---------- */
+
+.fab {
+	position: fixed; right: 20px; bottom: calc(var(--tabs-h) + 18px);
+	width: 60px; height: 60px; border-radius: 18px;
+	background: var(--green); color: #05230f; border: none;
+	cursor: pointer; padding: 15px; z-index: 15;
+	box-shadow: 0 6px 20px rgba(36, 209, 106, .3);
+}
+.fab svg { width: 100%; height: 100%; stroke-width: 2.1; }
+.fab:hover { filter: brightness(1.08); }
+
+@media (min-width: 902px) { .fab { right: calc(50vw - 450px + 20px); } }
+
+/* ---------- Kontakt tafsiloti ---------- */
+
+.c-head { padding: 18px 16px 8px; }
+.kv { margin-bottom: 6px; }
+.k { color: var(--muted); }
+.kv b { font-weight: 700; }
+.info-label { margin: 10px 0 6px; }
+.info-box { background: var(--panel-2); border-radius: 10px; padding: 12px 14px; font-weight: 700; }
+
+/* Debt / Loan */
+
+.seg {
+	display: flex; margin: 20px 16px;
+	border: 1px solid var(--line); border-radius: 999px; padding: 5px;
+}
+.seg button {
+	flex: 1; background: none; border: none; cursor: pointer;
+	padding: 12px; border-radius: 999px; font-size: 17px; font-weight: 600;
+	color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.seg .chk { width: 20px; height: 20px; display: none; }
+.seg button.on { background: var(--panel-2); }
+.seg button.on .chk { display: block; }
+.seg button[data-kind="debt"].on { color: var(--red); }
+.seg button[data-kind="loan"].on { color: var(--green); }
+
+/* Summa maydoni */
+
+.amount-row { display: flex; align-items: flex-end; gap: 16px; padding: 14px 16px 6px; }
+.cur-ico { width: 30px; height: 30px; color: var(--muted); flex-shrink: 0; margin-bottom: 8px; }
+.field { flex: 1; }
+.field label { display: block; font-size: 14px; color: var(--green); margin-bottom: 4px; }
+.field input {
+	width: 100%; background: none; border: none;
+	border-bottom: 1.5px solid var(--green);
+	padding: 8px 2px; outline: none; font-size: 17px;
+}
+
+.link-toggle {
+	background: none; border: none; color: var(--green);
+	font-size: 15px; font-weight: 600; cursor: pointer;
+	padding: 12px 16px 12px 62px; display: block; text-align: left;
+}
+.link-toggle:hover { text-decoration: underline; }
+
+.info-input { display: flex; align-items: center; gap: 16px; padding: 0 16px 10px; }
+.doc-ico { width: 30px; height: 30px; color: var(--muted); flex-shrink: 0; }
+.info-input input {
+	flex: 1; background: var(--panel-2); border: none;
+	border-radius: 999px; padding: 14px 18px; outline: none;
+}
+
+.hr { height: 1px; background: var(--line); margin: 10px 16px; }
+
+/* Ikki yig'indi */
+
+.two-sum {
+	display: flex; margin: 14px 16px 0;
+	font-size: 19px; font-weight: 700; text-align: center;
+}
+.two-sum div { flex: 1; padding: 8px; }
+.two-sum div:first-child { border-right: 1px solid var(--line); }
+
+/* Tarix */
+
+.h-row {
+	display: flex; align-items: center; gap: 12px;
+	padding: 14px 16px; margin-top: 10px;
+}
+.h-row.debt { background: var(--red-tint); }
+.h-row.loan { background: var(--green-tint); }
+.h-left { flex: 1; min-width: 0; }
+.h-amt { font-size: 17px; font-weight: 700; }
+.h-note { font-size: 14px; color: var(--muted); margin-top: 3px; word-break: break-word; }
+.h-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.h-date { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.h-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--red); }
+.h-row.loan .h-dot { background: var(--green); }
+.i-btn { background: none; border: none; cursor: pointer; color: var(--muted); width: 26px; height: 26px; padding: 0; }
+.i-btn:hover { color: var(--text); }
+.i-btn svg { width: 100%; height: 100%; }
+
+/* Save */
+
+.save {
+	position: fixed; left: 50%; transform: translateX(-50%);
+	bottom: 18px; width: min(88%, 780px);
+	background: var(--green); color: #05230f; border: none;
+	border-radius: 999px; padding: 18px; font-size: 17px; font-weight: 700;
+	cursor: pointer; z-index: 16;
+}
+.save:hover { filter: brightness(1.08); }
+
+/* ---------- Reports ---------- */
+
+.rep-group { margin: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.rep-row { display: flex; align-items: center; gap: 20px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.rep-row:last-child { border-bottom: none; }
+.rep-row[data-range] { cursor: pointer; }
+.rep-row[data-range]:hover { background: var(--panel); }
+.rep-ico { width: 26px; height: 26px; color: var(--muted); flex-shrink: 0; }
+.rep-label { color: var(--muted); font-size: 15px; }
+.rep-val { font-size: 19px; font-weight: 700; margin-top: 2px; }
+.rep-val.sm { font-size: 17px; }
+
+/* ---------- Settings ---------- */
+
+.set-row {
+	display: flex; align-items: center; justify-content: space-between;
+	gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--line);
+	width: 100%; background: none; border-left: none; border-right: none; border-top: none;
+	text-align: left; cursor: pointer;
+}
+.set-row:last-child { border-bottom: none; }
+.as-btn:hover { background: var(--panel); }
+.set-row select { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; outline: none; }
+.set-row.danger { color: var(--red); }
+.chev { color: var(--muted); font-size: 22px; }
+.foot-note { color: var(--muted); font-size: 13px; padding: 0 20px; }
+
+/* ---------- Pastki menyu ---------- */
+
+.tabs {
+	position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+	width: min(100%, 900px); height: var(--tabs-h);
+	background: var(--panel); border-top: 1px solid var(--line);
+	display: flex; z-index: 25;
+}
+.tabs[hidden] { display: none; }
+
+.tab {
+	flex: 1; background: none; border: none; cursor: pointer;
+	display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+	color: var(--muted); font-size: 11px; font-weight: 600;
+}
+.tab svg { width: 23px; height: 23px; }
+.tab.is-on { color: var(--green); }
+.tab.is-on svg { background: var(--green-tint); border-radius: 999px; padding: 3px 12px; width: 47px; }
+
+/* ---------- Pastdan chiqadigan oyna ---------- */
+
+.sheet {
+	position: fixed; inset: 0; z-index: 40;
+	background: rgba(0, 0, 0, .65);
+	display: flex; align-items: flex-end; justify-content: center;
+}
+.sheet[hidden] { display: none; }
+
+.sheet-card {
+	background: var(--panel); width: min(100%, 460px);
+	border-radius: 18px 18px 0 0; padding: 10px 0 14px;
+	max-height: 88vh; overflow-y: auto;
+}
+.sheet-title { padding: 12px 20px; color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .06em; }
+.sheet-item {
+	display: block; width: 100%; background: none; border: none;
+	text-align: left; padding: 16px 20px; cursor: pointer; font-size: 16px;
+}
+.sheet-item:hover { background: var(--panel-2); }
+.sheet-item.danger { color: var(--red); }
+.sheet-close {
+	display: block; width: calc(100% - 40px); margin: 10px 20px 0;
+	background: var(--panel-2); border: none; border-radius: 12px;
+	padding: 15px; cursor: pointer; font-weight: 600;
+}
+
+.det { padding: 4px 20px 10px; }
+.det div { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.det span:first-child { color: var(--muted); }
+
+/* ---------- Kirish ---------- */
+
+.login-wrap { max-width: 420px; margin: 0 auto; padding: 60px 20px 40px; width: 100%; }
+.login-brand { font-size: 30px; font-weight: 800; text-align: center; margin: 0 0 6px; }
+.login-sub { text-align: center; color: var(--muted); margin: 0 0 30px; }
+.login-err {
+	background: var(--red-tint); color: var(--red);
+	border-radius: 10px; padding: 12px 16px; margin: 16px 0 0; font-size: 14px;
+}
+.login-btn { position: static; transform: none; width: 100%; margin-top: 26px; }
+.login-switch { text-align: center; width: 100%; padding-left: 16px; }
+
+.muted-val { color: var(--muted); }
+
+/* Yuklanmoqda */
+.loading { padding: 60px 20px; text-align: center; color: var(--muted); }
+
+/* Kalkulyator */
+
+.calc-card { width: min(100%, 340px); }
+.calc-screen {
+	font-size: 30px; font-weight: 700; text-align: right;
+	padding: 18px 22px; word-break: break-all; min-height: 74px;
+}
+.calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 0 14px; }
+.calc-grid button {
+	background: var(--panel-2); border: none; border-radius: 14px;
+	padding: 18px 0; font-size: 20px; cursor: pointer;
+}
+.calc-grid button:hover { filter: brightness(1.3); }
+.calc-grid .op { color: var(--green); }
+.calc-grid .fn { color: var(--muted); }
+.calc-grid .eq { background: var(--green); color: #05230f; font-weight: 700; }
+.calc-grid .wide { grid-column: span 2; }
