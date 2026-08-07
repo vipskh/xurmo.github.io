@@ -12,6 +12,9 @@
 	--muted: #71717a;
 	--red: #c81e28;
 	--red-tint: #fdf3f3;
+	/* Faqat "to'langan" (balans 0) holati uchun — qarz tugaganini
+	   ro'yxatdan ko'z bilan darrov ajratish uchun */
+	--green: #15803d;
 	--nav-h: 56px;
 	--radius: 8px;
 }
@@ -37,6 +40,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 
 .pos { color: var(--text); }
 .neg { color: var(--red); }
+.zero { color: var(--green); }
 .muted-val { color: var(--muted); }
 
 /* ---------- Tepadagi menyu ---------- */
@@ -72,18 +76,79 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 .nav-right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
 .who { color: var(--muted); font-size: 13px; margin-right: 4px; }
 
-.guest-tag {
-	display: flex; align-items: center; gap: 8px;
-	background: var(--panel-2); border: 1px solid var(--line);
-	border-radius: 999px; padding: 4px 6px 4px 12px;
-	font-size: 12px; color: var(--muted); margin-right: 4px;
+/* ---------- Kunlik faoliyat ---------- */
+
+.day-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.day-label { font-weight: 700; min-width: 110px; text-align: center; }
+.day-select { flex: 1; max-width: 220px; margin-left: auto; }
+#day-next:disabled { opacity: .3; cursor: default; }
+
+.act-row {
+	display: flex; align-items: center; gap: 14px;
+	padding: 12px 14px; border: 1px solid var(--line);
+	border-radius: var(--radius); margin-bottom: 8px; cursor: pointer;
 }
-.link-inline {
-	background: var(--text); color: var(--bg); border: none;
-	border-radius: 999px; padding: 4px 11px; font-size: 12px;
-	font-weight: 600; cursor: pointer;
+.act-row:hover { background: var(--panel); }
+.act-row.debt { border-left: 3px solid var(--red); }
+.act-row.loan { border-left: 3px solid var(--text); }
+.act-amt { font-weight: 800; font-size: 16px; white-space: nowrap; min-width: 110px; }
+.act-main { flex: 1; min-width: 0; }
+.act-name { font-weight: 600; }
+.act-note { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.act-right { text-align: right; flex-shrink: 0; }
+.act-time { font-size: 13px; }
+.act-by { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+.sec-sub {
+	font-size: 12px; color: var(--muted); text-transform: uppercase;
+	letter-spacing: .06em; font-weight: 600; margin: 22px 0 8px;
 }
-.link-inline:hover { background: #27272a; }
+
+.h-by { color: var(--muted); font-size: 13px; }
+.row-acts { display: flex; gap: 4px; flex-shrink: 0; }
+
+/* Qarzdan qutilganlar */
+
+.act-row.is-closed { border-left-color: var(--green); background: #f6fdf8; }
+
+.badge-closed {
+	background: var(--green); color: #fff;
+	border-radius: 999px; padding: 2px 9px;
+	font-size: 11px; font-weight: 700; margin-left: 8px;
+	white-space: nowrap;
+}
+
+.closed-box {
+	border: 1px solid var(--line); border-left: 3px solid var(--green);
+	border-radius: var(--radius); padding: 12px 16px; margin-bottom: 16px;
+	font-size: 14px;
+}
+.closed-title { color: var(--muted); margin-right: 6px; }
+#closed-names { font-weight: 600; }
+
+.badge-owner {
+	background: var(--text); color: var(--bg);
+	border-radius: 999px; padding: 2px 9px;
+	font-size: 11px; font-weight: 700; margin-left: 8px;
+	text-transform: uppercase; letter-spacing: .04em;
+}
+
+/* ---------- Qulf ekrani ---------- */
+
+.lock {
+	position: fixed; inset: 0; z-index: 100;
+	background: rgba(255, 255, 255, .97);
+	display: flex; align-items: center; justify-content: center;
+	padding: 20px;
+}
+.lock[hidden] { display: none; }
+
+.lock-card { width: min(100%, 320px); text-align: center; }
+.lock-ico { width: 44px; height: 44px; color: var(--muted); margin-bottom: 14px; }
+.lock-title { font-size: 20px; font-weight: 800; }
+.lock-who { color: var(--muted); margin: 6px 0 22px; }
+.lock-card .inp { width: 100%; text-align: center; }
+.lock-card .btn-block { margin-top: 14px; }
 
 .ico {
 	background: none; border: none; cursor: pointer;
@@ -159,7 +224,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 	width: 10px; height: 10px; border-radius: 50%;
 	background: var(--red); border: 2px solid var(--panel);
 }
-.ava-dot.paid { background: var(--line-2); }
+.ava-dot.paid { background: var(--green); }
 
 .c-main { flex: 1; min-width: 0; }
 .c-nm { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

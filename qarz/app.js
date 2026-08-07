@@ -17,6 +17,9 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
 
 let db = { contacts: [], notes: [], cur: '$' };
 let user = null;
+let isOwner = false;
+let lockMinutes = 10;
+let unsubscribe = null;
 let openId = null;
 let sortMode = 'recent';
 let ranges = { a: 'all', b: 'all' };
@@ -70,8 +73,15 @@ const show = (name) => {
 	$('topnav').hidden = name === 'login';
 	document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('is-on', t.dataset.tab === name));
 	if (name === 'debts') renderList();
-	if (name === 'notes') renderNotes();
+	if (name === 'notes') { renderToday(); fillCashiers(); }
 	if (name === 'reports') renderReports();
+	if (name === 'settings' && isOwner) renderMembers();
+
+	// Kassir faqat o'z ishini ko'radi — sarlavhada shu aytiladi
+	if (!isOwner) {
+		$('act-title').textContent = t('myActivity');
+		$('rep-title').textContent = t('myReports');
+	}
 };
 
 document.querySelectorAll('.tab').forEach((t) =>
@@ -94,8 +104,18 @@ const sortContacts = (list) => {
 // shunda bo'sh joy va chiziqchalar xalaqit bermaydi.
 const digits = (s) => String(s).replace(/\D/g, '');
 
+// Ro'yxatda ko'rinadigan nom: ismga telefon raqamining oxirgi 4 raqami
+// qo'shiladi — "sardor0509". Bir xil ismli kontaktlarni ajratish uchun
+// (bitta daftarda 5 ta Sardor bo'lishi mumkin). Saqlangan ism o'zgarmaydi,
+// bu faqat ko'rinish; telefon tahrirlansa nom ham yangilanadi.
+const displayName = (c) => {
+	const d = digits(c.info || '');
+	return d.length >= 4 ? `${c.name}${d.slice(-4)}` : c.name;
+};
+
 const matches = (c, q) => {
 	if (!q) return true;
+	if (displayName(c).toLowerCase().includes(q)) return true;   // "sardor0509"
 	if (c.name.toLowerCase().includes(q)) return true;
 	if ((c.info || '').toLowerCase().includes(q)) return true;
 
@@ -121,10 +141,10 @@ const renderList = () => {
 				<span class="ava-dot${balance === 0 ? ' paid' : ''}"></span>
 			</div>
 			<div class="c-main">
-				<div class="c-nm">${esc(c.name)}</div>
+				<div class="c-nm">${esc(displayName(c))}</div>
 				<div class="c-time">${esc(c.info) || dt(lastAt(c)).slice(0, 10)}</div>
 			</div>
-			<div class="c-bal ${balance < 0 ? 'neg' : ''}">${money(balance)}</div>
+			<div class="c-bal ${balance < 0 ? 'neg' : balance === 0 ? 'zero' : ''}">${money(balance)}</div>
 		</div>`;
 	}).join('');
 };
@@ -153,7 +173,7 @@ const openContact = (id) => {
 
 	const { debt, loan, balance } = sums(c);
 	$('c-balance').textContent = money(balance);
-	$('c-balance').className = `d-bal-num ${balance < 0 ? 'neg' : ''}`;
+	$('c-balance').className = `d-bal-num ${balance < 0 ? 'neg' : balance === 0 ? 'zero' : ''}`;
 	$('c-sum-debt').textContent = debt ? `−${plain(debt)}` : `0 ${db.cur}`;
 	$('c-sum-loan').textContent = loan ? `+${plain(loan)}` : `0 ${db.cur}`;
 
@@ -161,6 +181,7 @@ const openContact = (id) => {
 		<tr class="${e.kind}">
 			<td class="h-amt ${e.kind === 'debt' ? 'neg' : ''}">${e.kind === 'debt' ? '−' : '+'}${plain(e.amount)}</td>
 			<td class="h-note">${esc(e.note) || '—'}</td>
+			<td class="h-by">${esc(e.byName) || '—'}</td>
 			<td class="h-date">${dt(e.at)}${e.pending ? ` · ${t('pendingMark')}` : ''}</td>
 			<td><button class="i-btn" data-info="${e.id}">
 				<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
@@ -192,7 +213,10 @@ $('c-save').addEventListener('click', async () => {
 	const data = { kind: segKind('c-seg'), amount, note: $('c-note').value.trim() };
 
 	// 1. Ekranni darhol yangilaymiz — server javobini kutmasdan
-	const temp = { id: `tmp-${Date.now()}`, ...data, at: Date.now(), pending: true };
+	const temp = {
+		id: `tmp-${Date.now()}`, ...data, at: Date.now(), pending: true,
+		by: user.$id, byName: user.name || user.email,
+	};
 	c.entries.push(temp);
 	$('c-amount').value = '';
 	$('c-note').value = '';
@@ -291,7 +315,10 @@ $('ctx-clear').addEventListener('click', async () => {
 	if (!balance) return;
 
 	const data = { kind: balance < 0 ? 'loan' : 'debt', amount: Math.abs(balance), note: t('accountClosed') };
-	const temp = { id: `tmp-${Date.now()}`, ...data, at: Date.now(), pending: true };
+	const temp = {
+		id: `tmp-${Date.now()}`, ...data, at: Date.now(), pending: true,
+		by: user.$id, byName: user.name || user.email,
+	};
 	c.entries.push(temp);
 	openContact(c.id);
 
@@ -358,46 +385,153 @@ $('sortsheet').addEventListener('click', (e) => {
 
 // ---------- Notes ----------
 
-const renderNotes = () => {
-	if (!db.notes.length) {
-		$('note-list').innerHTML = `<p class="empty">${t('noNotes')}</p>`;
+// Tanlangan kunda kim qarz oldi, kim to'ladi — barcha kontaktlar bo'yicha.
+// Egasi telefonda shu ro'yxatni kuzatadi.
+
+let dayOffset = 0;          // 0 = bugun, 1 = kecha…
+let cashierFilter = '';     // bo'sh = hammasi
+
+const dayBounds = (offset) => {
+	const d = new Date();
+	d.setHours(0, 0, 0, 0);
+	d.setDate(d.getDate() - offset);
+	return [d.getTime(), d.getTime() + 864e5];
+};
+
+const renderToday = () => {
+	const [from, to] = dayBounds(dayOffset);
+
+	// Kassir faqat O'ZI yozganlarini ko'radi — boshqa kassirning ishi
+	// unga tegishli emas. Ega hammasini ko'radi va filtrlaydi.
+	//
+	// DIQQAT: bu faqat SHU ro'yxatga taalluqli. Qarzdorning balansi va
+	// tarixi hammaga to'liq ko'rinadi — aks holda kassir noto'g'ri
+	// summa so'rab qolardi.
+	const only = isOwner ? cashierFilter : user.$id;
+
+	// Qaysi yozuv qarzni butunlay yopganini topamiz: yozuvlarni vaqt
+	// bo'yicha yurib, balans nolga tushgan lahzani belgilaymiz.
+	// Shunda «bugun kim qarzdan qutildi» ko'rinadi.
+	const closers = new Set();
+	for (const c of db.contacts) {
+		let bal = 0;
+		for (const e of [...c.entries].sort((a, b) => a.at - b.at)) {
+			const before = bal;
+			bal += e.kind === 'debt' ? -e.amount : e.amount;
+			if (before !== 0 && bal === 0) closers.add(e.id);
+		}
+	}
+
+	const rows = [];
+	for (const c of db.contacts) {
+		for (const e of c.entries) {
+			if (e.at < from || e.at >= to) continue;
+			if (only && e.by !== only) continue;
+			rows.push({ ...e, contact: c, closed: closers.has(e.id) });
+		}
+	}
+	rows.sort((a, b) => b.at - a.at);
+
+	const label = dayOffset === 0 ? t('today')
+		: dayOffset === 1 ? t('yesterday')
+		: new Date(from).toLocaleDateString('ru-RU');
+	$('day-label').textContent = label;
+	$('day-next').disabled = dayOffset === 0;
+
+	const debt = rows.filter((r) => r.kind === 'debt').reduce((s, r) => s + r.amount, 0);
+	const loan = rows.filter((r) => r.kind === 'loan').reduce((s, r) => s + r.amount, 0);
+	const closedList = rows.filter((r) => r.closed);
+
+	$('day-debt').textContent = debt ? `−${plain(debt)}` : `0 ${db.cur}`;
+	$('day-loan').textContent = loan ? `+${plain(loan)}` : `0 ${db.cur}`;
+	$('day-count').textContent = rows.length;
+	$('day-closed').textContent = closedList.length;
+
+	// Qarzdan qutilganlar ro'yxati — ismlari bilan
+	$('closed-names').textContent = closedList.length
+		? closedList.map((r) => r.contact.name).join(', ')
+		: '';
+	$('closed-box').hidden = !closedList.length;
+
+	if (!rows.length) {
+		$('note-list').innerHTML = `<p class="empty">${t('noActivity')}</p>`;
 		return;
 	}
-	$('note-list').innerHTML = [...db.notes].sort((a, b) => b.at - a.at).map((n) => `
-		<div class="note-item">
-			<div class="note-text">${esc(n.text)}<div class="note-date">${dt(n.at)}</div></div>
-			<button class="i-btn" data-del-note="${n.id}">
-				<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>
-			</button>
+
+	$('note-list').innerHTML = rows.map((r) => `
+		<div class="act-row ${r.kind}${r.closed ? ' is-closed' : ''}" data-open-contact="${r.contact.id}">
+			<div class="act-amt ${r.kind === 'debt' ? 'neg' : ''}">${r.kind === 'debt' ? '−' : '+'}${plain(r.amount)}</div>
+			<div class="act-main">
+				<div class="act-name">
+					${esc(r.contact.name)}
+					${r.closed ? `<span class="badge-closed">${t('closedBadge')}</span>` : ''}
+				</div>
+				${r.note ? `<div class="act-note">${esc(r.note)}</div>` : ''}
+			</div>
+			<div class="act-right">
+				<div class="act-time">${hm(r.at)}</div>
+				<div class="act-by">${esc(r.byName) || '—'}</div>
+			</div>
 		</div>`).join('');
 };
 
-document.querySelector('[data-new-note]').addEventListener('click', () => {
-	const text = prompt(t('notePrompt'));
-	if (!text?.trim()) return;
-	db.notes.push({ id: Date.now().toString(36), text: text.trim(), at: Date.now() });
-	store.saveNotes(db.notes);
-	renderNotes();
-});
+const hm = (ts) => {
+	const d = new Date(ts);
+	return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 
 $('note-list').addEventListener('click', (e) => {
-	const b = e.target.closest('[data-del-note]');
-	if (!b) return;
-	db.notes = db.notes.filter((n) => n.id !== b.dataset.delNote);
-	store.saveNotes(db.notes);
-	renderNotes();
+	const row = e.target.closest('[data-open-contact]');
+	if (!row) return;
+	show('debts');
+	openContact(row.dataset.openContact);
 });
+
+$('day-prev').addEventListener('click', () => { dayOffset++; renderToday(); });
+$('day-next').addEventListener('click', () => { if (dayOffset > 0) { dayOffset--; renderToday(); } });
+
+// Kassir bo'yicha filtr — egasi kimning ishini ko'rmoqchi bo'lsa
+$('day-cashier').addEventListener('change', () => {
+	cashierFilter = $('day-cashier').value;
+	renderToday();
+});
+
+// Kassir bo'yicha filtr faqat egaga. Kassirga tanlash kerak emas —
+// u baribir faqat o'zinikini ko'radi.
+const fillCashiers = async () => {
+	$('day-cashier').hidden = !isOwner;
+	if (!isOwner) return;
+
+	try {
+		const list = await store.members();
+		// Ega kassir emas — alohida ajratiladi
+		const owners = list.filter((m) => m.owner);
+		const cashiers = list.filter((m) => !m.owner);
+
+		$('day-cashier').innerHTML =
+			`<option value="">${t('allCashiers')}</option>` +
+			owners.map((m) => `<option value="${m.id}">${t('owner')} — ${esc(m.name)}</option>`).join('') +
+			(cashiers.length
+				? `<optgroup label="${t('cashiers')}">` +
+					cashiers.map((m) => `<option value="${m.id}">${esc(m.name)}</option>`).join('') +
+					'</optgroup>'
+				: '');
+	} catch { /* ro'yxat olinmasa filtr bo'sh qoladi */ }
+};
 
 // ---------- Reports ----------
 
 const RANGE_MS = { today: 864e5, week: 6048e5, month: 2592e6, year: 31536e6 };
 const RANGE_KEY = { all: 'allTime', today: 'today', week: 'week', month: 'month', year: 'year' };
 
+// Kassir hisobotda faqat o'z ishini ko'radi — boshqa kassirning
+// yig'gani unga ko'rinmaydi. Ega hammasini ko'radi.
 const totals = (r) => {
 	let debt = 0, loan = 0;
 	for (const c of db.contacts) {
 		for (const e of c.entries) {
 			if (r !== 'all' && e.at < Date.now() - RANGE_MS[r]) continue;
+			if (!isOwner && e.by !== user.$id) continue;
 			e.kind === 'debt' ? (debt += e.amount) : (loan += e.amount);
 		}
 	}
@@ -490,11 +624,105 @@ $('set-import').addEventListener('click', () => {
 });
 
 $('set-logout').addEventListener('click', async () => {
+	clearTimeout(lockTimer);
+	unsubscribe?.();
 	await store.logout().catch(() => {});
-	user = null;
-	openId = null;
+	user = null; isOwner = false; openId = null;
 	db = { contacts: [], notes: [], cur: db.cur };
 	show('login');
+});
+
+// Qulflash daqiqasi — faqat ega o'zgartiradi, telefonidan ham
+$('set-lock').addEventListener('change', async () => {
+	const n = Number($('set-lock').value);
+	try {
+		({ lockMinutes } = await store.saveSettings({ lockMinutes: n }));
+		startLockTimer();
+	} catch (e) {
+		alert(`${t('saveFail')}: ${e.message}`);
+		$('set-lock').value = String(lockMinutes);
+	}
+});
+
+// Kassirlar ro'yxati
+const renderMembers = async () => {
+	try {
+		const list = await store.members();
+		// Ega tepada, keyin kassirlar — ega kassirlar qatoriga qo'shilmaydi
+		const sorted = [...list].sort((a, b) => (b.owner ? 1 : 0) - (a.owner ? 1 : 0));
+
+		$('member-list').innerHTML = sorted.map((m) => `
+			<div class="set-row">
+				<span>
+					${esc(m.name)}
+					${m.owner ? `<span class="badge-owner">${t('owner')}</span>`
+						: `<span class="muted-val">· ${esc(m.email.replace(`@${store.LOGIN_DOMAIN}`, ''))}</span>`}
+				</span>
+				${m.owner || !isOwner ? '' : `<span class="row-acts">
+					<button class="i-btn" data-pw="${m.id}" title="${t('newPassword')}">
+						<svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
+					</button>
+					<button class="i-btn" data-rm="${m.membershipId}" title="${t('remove')}">
+						<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>
+					</button>
+				</span>`}
+			</div>`).join('');
+	} catch (e) {
+		$('member-list').innerHTML = `<div class="set-row muted-val">${esc(e.message)}</div>`;
+	}
+};
+
+$('member-list').addEventListener('click', async (e) => {
+	const rm = e.target.closest('[data-rm]');
+	const pw = e.target.closest('[data-pw]');
+
+	if (rm) {
+		if (!confirm(t('removeConfirm'))) return;
+		try { await store.removeMember(rm.dataset.rm); renderMembers(); }
+		catch (ex) { alert(ex.message); }
+		return;
+	}
+
+	if (pw) {
+		const p = prompt(t('newPasswordPrompt'));
+		if (!p) return;
+		try { await store.setCashierPassword(pw.dataset.pw, p); alert(t('passwordChanged')); }
+		catch (ex) { alert(ex.message); }
+	}
+});
+
+// Yangi kassir qo'shish
+$('add-cashier').addEventListener('click', () => {
+	$('k-login').value = ''; $('k-name').value = ''; $('k-pass').value = '';
+	$('k-err').hidden = true;
+	openSheet('cashiersheet');
+	$('k-name').focus();
+});
+
+$('k-save').addEventListener('click', async () => {
+	const login = $('k-login').value.trim();
+	const password = $('k-pass').value;
+	const name = $('k-name').value.trim();
+
+	const err = $('k-err');
+	err.hidden = true;
+
+	const btn = $('k-save');
+	btn.disabled = true;
+	btn.textContent = t('saving');
+
+	try {
+		await store.addCashier({ login, password, name });
+		closeSheets();
+		renderMembers();
+		alert(`${t('cashierAdded')}\n\n${t('login')}: ${login}\n${t('password')}: ${password}`);
+	} catch (ex) {
+		err.textContent = ex.message;
+		err.hidden = false;
+	} finally {
+		btn.disabled = false;
+		btn.textContent = t('save');
+	}
 });
 
 // ---------- Kalkulyator ----------
@@ -560,13 +788,16 @@ $('login-form').addEventListener('submit', async (e) => {
 	btn.textContent = t('waiting');
 
 	try {
-		const email = $('l-email').value.trim();
+		// Kassir "aziz" deb kiradi, ega esa o'z emaili bilan
+		const raw = $('l-email').value.trim();
 		const pass = $('l-pass').value;
+
 		if (signupMode) {
 			if (pass.length < 8) throw new Error(t('passShort'));
-			await store.register(email, pass, $('l-name').value.trim() || email);
+			if (!raw.includes('@')) throw new Error(t('needEmail'));
+			await store.register(raw, pass, $('l-name').value.trim() || raw);
 		} else {
-			await store.login(email, pass);
+			await store.login(store.loginToEmail(raw), pass);
 		}
 		await start();
 	} catch (ex) {
@@ -578,6 +809,76 @@ $('login-form').addEventListener('submit', async (e) => {
 		btn.disabled = false;
 		btn.textContent = t(signupMode ? 'signUp' : 'signIn');
 	}
+});
+
+// ---------- Harakatsizlikda qulflash ----------
+//
+// Kassa kompyuteri ochiq qolib ketmasin: belgilangan vaqt tegilmasa
+// ekran qulflanadi va parol so'raydi. Ish TO'XTAMAYDI — parol kiritilsa
+// o'sha joyidan davom etadi. Boshqa kassir kelsa "Boshqa hisob" bosadi.
+//
+// Daqiqani egasi Sozlamalardan (telefonidan ham) o'zgartiradi.
+
+let lockTimer = null;
+
+const doLock = () => {
+	if ($('lock').hidden === false) return;
+	$('lock-who').textContent = user?.name || user?.email || '';
+	$('lock-pass').value = '';
+	$('lock-err').hidden = true;
+	$('lock').hidden = false;
+	$('lock-pass').focus();
+};
+
+const startLockTimer = () => {
+	clearTimeout(lockTimer);
+	if (!lockMinutes) return;                 // 0 = qulflanmaydi
+	lockTimer = setTimeout(doLock, lockMinutes * 60000);
+};
+
+for (const ev of ['click', 'keydown', 'touchstart', 'wheel']) {
+	document.addEventListener(ev, () => {
+		if ($('lock').hidden) startLockTimer();
+	}, { passive: true });
+}
+
+$('lock-form').addEventListener('submit', async (e) => {
+	e.preventDefault();
+
+	const btn = $('lock-open');
+	const err = $('lock-err');
+	btn.disabled = true;
+	err.hidden = true;
+
+	try {
+		if (await store.verifyPassword($('lock-pass').value)) {
+			$('lock').hidden = true;
+			$('lock-pass').value = '';
+			startLockTimer();
+		} else {
+			err.textContent = t('badPass');
+			err.hidden = false;
+			$('lock-pass').select();
+		}
+	} catch (ex) {
+		// Tarmoq uzilgan bo'lsa — sababini aytamiz, "parol noto'g'ri"
+		// deb chalg'itmaymiz
+		err.textContent = ex.message;
+		err.hidden = false;
+	} finally {
+		btn.disabled = false;
+	}
+});
+
+// Boshqa kassir kelganda — butunlay chiqib, yangisi kiradi
+$('lock-switch').addEventListener('click', async () => {
+	clearTimeout(lockTimer);
+	unsubscribe?.();
+	await store.logout().catch(() => {});
+	user = null; isOwner = false; openId = null;
+	db = { contacts: [], notes: [], cur: db.cur };
+	$('lock').hidden = true;
+	show('login');
 });
 
 // ---------- Ishga tushirish ----------
@@ -599,36 +900,15 @@ window.addEventListener('popstate', () => {
 	}
 });
 
-// Mehmon rejimida foydalanuvchi yo'q — ruxsat berish uchun soxta ID
-// yetarli, chunki ma'lumot serverga umuman bormaydi
-const GUEST_USER = { $id: 'guest', email: '' };
-
-const enterGuest = async () => {
-	store.setGuest(true);
-	user = GUEST_USER;
-	await load();
-};
-
-$('l-guest').addEventListener('click', enterGuest);
-
-// Mehmondan haqiqiy hisobga o'tish
-$('guest-login').addEventListener('click', () => {
-	store.setGuest(false);
-	user = null;
-	openId = null;
-	db = { contacts: [], notes: [], cur: db.cur };
-	show('login');
-});
-
-// Mehmon yoki haqiqiy hisob — qaysi rejimda ekanini ko'rsatuvchi matnlar.
-// Til almashtirilganda ham qayta chaqiriladi.
+// Kim kirgani va qaysi rolda ekani ko'rsatiladi
 const syncModeText = () => {
-	const isGuest = store.guest;
-	$('set-who').textContent = isGuest ? t('guestMode') : (user?.email || '');
-	$('nav-who').textContent = isGuest ? '' : (user?.email || '');
-	$('guest-tag').hidden = !isGuest;
-	$('set-logout').hidden = isGuest;
-	$('foot-note').textContent = t(isGuest ? 'guestNote' : 'dataNote');
+	const who = user?.name || user?.email || '';
+	$('set-who').textContent = who;
+	$('nav-who').textContent = isOwner ? who : `${who} · ${t('cashier')}`;
+
+	// Kassirga tegishli bo'lmagan bo'limlar yashiriladi
+	$('owner-only').hidden = !isOwner;
+	$('foot-note').textContent = t('dataNote');
 };
 
 const load = async () => {
@@ -641,29 +921,38 @@ const load = async () => {
 
 	try {
 		db.contacts = await store.fetchAll();
-		db.notes = store.loadNotes();
+		({ lockMinutes } = await store.loadSettings());
+		$('set-lock').value = String(lockMinutes);
 	} catch (e) {
 		$('contact-list').innerHTML = `<p class="empty">${t('loadFail')}: ${esc(e.message)}</p>`;
 		return;
 	}
 
-	renderList(); renderNotes(); renderReports();
+	renderList(); renderToday(); renderReports();
+	startLockTimer();
+
+	// Boshqa kassir yozuv qo'shsa — darrov ekranda paydo bo'ladi
+	unsubscribe?.();
+	unsubscribe = store.subscribe((entry, contactId) => {
+		const c = byId(contactId);
+		if (!c || c.entries.some((e) => e.id === entry.id)) return;
+		c.entries.push(entry);
+		renderList();
+		renderToday();
+		if (openId === contactId) openContact(contactId);
+	});
 };
 
 const start = async () => {
 	applyLang();
 	history.pushState(null, '', location.href);
 
-	user = await store.me();
-	if (user) {
-		store.setGuest(false);
-		await load();
-		return;
-	}
+	const session = await store.init().catch(() => null);
+	if (!session) { show('login'); return; }
 
-	// Sessiya yo'q — kirish ekranini ko'rsatmasdan darrov sinov rejimiga
-	// o'tamiz. Kirish tepadagi "Kirish" havolasi orqali ochiladi.
-	await enterGuest();
+	user = session.me;
+	isOwner = session.isOwner;
+	await load();
 };
 
 start();

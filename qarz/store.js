@@ -1,11 +1,18 @@
-// Qarz daftar — ma'lumot qatlami (Appwrite).
+// Qarz daftar — ma'lumot qatlami (Appwrite, jamoa rejimi).
 //
 // Bu yerda API kalit YO'Q va bo'lmasligi kerak. Brauzer faqat Project ID
-// bilan ishlaydi; yozish huquqi tizimga kirgan foydalanuvchiga beriladi.
+// bilan ishlaydi.
 //
-// Ma'lumot ajratilishi: har bir qator yaratilganda unga FAQAT yaratuvchining
-// o'zi ruxsat oladi. Boshqa foydalanuvchi ID'ni bilib turib ham o'qiy
-// olmaydi — tekshiruv serverda, brauzerda emas.
+// TUZILMA:
+//   Har restoran = bitta jamoa (Team). Ega — "owner" roli, kassirlar —
+//   "kassir" roli. Yozuvlar jamoaga tegishli, shuning uchun ega ham,
+//   kassir ham bir xil ma'lumotni ko'radi.
+//
+// XAVFSIZLIK:
+//   Yozuvlar (entries) faqat O'QISH ruxsati bilan yaratiladi — qo'shilgandan
+//   keyin hech kim o'zgartira yoki o'chira olmaydi. Kassir to'lovni yozib,
+//   keyin uni yashira olmaydi. Xato bo'lsa teskari yozuv qo'shiladi.
+//   Kontaktlarni faqat ega o'chiradi/tahrirlaydi.
 
 const CFG = {
 	endpoint: 'https://fra.cloud.appwrite.io/v1',
@@ -13,6 +20,7 @@ const CFG = {
 	db: 'marketplace',
 	contacts: 'menu_debt_contacts',
 	entries: 'menu_debt_entries',
+	settings: 'menu_debt_settings',
 };
 
 const base = `${CFG.endpoint}/tablesdb/${CFG.db}/tables`;
@@ -38,10 +46,10 @@ const request = async (method, url, body) => {
 const Q = (queries) => queries.map((q) => `queries[]=${encodeURIComponent(JSON.stringify(q))}`).join('&');
 
 const listAll = async (table, queries = []) => {
-	// Appwrite bir so'rovda 100 tadan ko'p qaytarmaydi — hammasini yig'amiz
+	// Appwrite bir so'rovda 100 tadan ko'p qaytarmaydi
 	const out = [];
 	let cursor = null;
-	for (let i = 0; i < 50; i++) {
+	for (let i = 0; i < 100; i++) {
 		const q = [...queries, { method: 'limit', values: [100] }];
 		if (cursor) q.push({ method: 'cursorAfter', values: [cursor] });
 		const { rows } = await request('GET', `${base}/${table}/rows?${Q(q)}`);
@@ -52,27 +60,15 @@ const listAll = async (table, queries = []) => {
 	return out;
 };
 
-// --- Mehmon rejimi ---
-//
-// Kirishsiz sinab ko'rish uchun. Ma'lumot faqat shu brauzerda qoladi —
-// serverga umuman tegmaydi. Shunday qilinishining sababi: sahifa ochiq,
-// kirishsiz hamma bitta serverdagi hisobga tushsa bir-birining yozuvini
-// ko'rar va o'chira olardi.
+// --- Joriy holat ---
 
-const GUEST_KEY = 'debtnote-guest';
-
-export let guest = false;
-export const setGuest = (v) => { guest = v; };
-
-const gLoad = () => {
-	try { return JSON.parse(localStorage.getItem(GUEST_KEY)) || []; } catch { return []; }
-};
-const gSave = (contacts) => localStorage.setItem(GUEST_KEY, JSON.stringify(contacts));
-const gid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+export let me = null;         // { $id, name, email }
+export let team = null;       // { $id, name }
+export let isOwner = false;
 
 // --- Kirish ---
 
-export const me = async () => {
+export const account = async () => {
 	try {
 		return await request('GET', `${CFG.endpoint}/account`);
 	} catch {
@@ -83,28 +79,78 @@ export const me = async () => {
 export const login = (email, password) =>
 	request('POST', `${CFG.endpoint}/account/sessions/email`, { email, password });
 
-export const logout = () =>
-	request('DELETE', `${CFG.endpoint}/account/sessions/current`);
+// Qulf ekrani uchun: parol to'g'rimi, sessiyani buzmasdan tekshirish.
+//
+// Oddiy yo'l — qayta kirish — ishlamaydi: Appwrite sessiya ochiq turganda
+// yangi sessiya yaratishga ruxsat bermaydi (user_session_already_exists),
+// shuning uchun to'g'ri parol ham rad etilardi.
+//
+// Parolni O'ZIGA almashtirish so'rovi esa `oldPassword` ni tekshiradi:
+// to'g'ri bo'lsa o'tadi, noto'g'ri bo'lsa user_invalid_credentials.
+// Parol o'zgarmaydi, sessiya butun qoladi.
+export const verifyPassword = async (password) => {
+	try {
+		await request('PATCH', `${CFG.endpoint}/account/password`, {
+			password, oldPassword: password,
+		});
+		return true;
+	} catch (e) {
+		if (e.type === 'user_invalid_credentials') return false;
+		throw e;   // tarmoq yoki boshqa xato — chaqiruvchi hal qiladi
+	}
+};
+
+export const logout = () => {
+	me = null; team = null; isOwner = false;
+	return request('DELETE', `${CFG.endpoint}/account/sessions/current`);
+};
 
 export const register = async (email, password, name) => {
 	await request('POST', `${CFG.endpoint}/account`, { userId: 'unique()', email, password, name });
 	return login(email, password);
 };
 
-// --- Ruxsatlar ---
-// Qator faqat egasiniki. Admin ham ko'ra olmaydi (API kalitsiz).
+// Kirgandan keyin: foydalanuvchi qaysi jamoada va qanday rolda?
+// Jamoa bo'lmasa — yangi ega, o'ziga jamoa yaratamiz.
+export const init = async () => {
+	me = await account();
+	if (!me) return null;
 
-const ownerOnly = (userId) => [
-	`read("user:${userId}")`,
-	`update("user:${userId}")`,
-	`delete("user:${userId}")`,
+	const { teams } = await request('GET', `${CFG.endpoint}/teams?${Q([{ method: 'limit', values: [10] }])}`);
+
+	if (!teams?.length) {
+		team = await request('POST', `${CFG.endpoint}/teams`, {
+			teamId: 'unique()',
+			name: me.name || me.email,
+			roles: ['owner'],
+		});
+		isOwner = true;
+	} else {
+		team = teams[0];
+		const { memberships } = await request('GET', `${CFG.endpoint}/teams/${team.$id}/memberships?${Q([{ method: 'limit', values: [100] }])}`);
+		const mine = memberships.find((m) => m.userId === me.$id);
+		isOwner = Boolean(mine?.roles?.includes('owner'));
+	}
+
+	return { me, team, isOwner };
+};
+
+// --- Ruxsatlar ---
+
+// Kontaktlar: jamoa ko'radi, faqat ega o'zgartiradi/o'chiradi
+const contactPerms = () => [
+	`read("team:${team.$id}")`,
+	`update("team:${team.$id}/owner")`,
+	`delete("team:${team.$id}/owner")`,
 ];
+
+// Yozuvlar: faqat o'qish. Yaratilgandan keyin o'zgarmaydi — pul yozuvi
+// uchun eng muhim qoida.
+const entryPerms = () => [`read("team:${team.$id}")`];
 
 // --- O'qish ---
 
 export const fetchAll = async () => {
-	if (guest) return gLoad();
-
 	const [contacts, entries] = await Promise.all([
 		listAll(CFG.contacts),
 		listAll(CFG.entries),
@@ -113,13 +159,7 @@ export const fetchAll = async () => {
 	const byContact = new Map();
 	for (const e of entries) {
 		if (!byContact.has(e.contact_id)) byContact.set(e.contact_id, []);
-		byContact.get(e.contact_id).push({
-			id: e.$id,
-			kind: e.kind,
-			amount: e.amount,
-			note: e.note || '',
-			at: Date.parse(e.$createdAt),
-		});
+		byContact.get(e.contact_id).push(toEntry(e));
 	}
 
 	return contacts.map((c) => ({
@@ -131,71 +171,177 @@ export const fetchAll = async () => {
 	}));
 };
 
+const toEntry = (e) => ({
+	id: e.$id,
+	kind: e.kind,
+	amount: e.amount,
+	note: e.note || '',
+	at: Date.parse(e.$createdAt),
+	by: e.by || '',
+	byName: e.by_name || '',
+});
+
 // --- Yozish ---
 
-export const addContact = async (userId, { name, info }) => {
-	if (guest) {
-		const c = { id: gid(), name, info: info || '', createdAt: Date.now(), entries: [] };
-		const all = gLoad();
-		all.push(c);
-		gSave(all);
-		return c;
+export const addContact = async (_userId, { name, info }) => {
+	// Kontaktga "faqat ega tahrirlaydi" ruxsati qo'yiladi. Appwrite'da
+	// foydalanuvchi o'zida bo'lmagan rolni bera olmaydi — kassir bunday
+	// ruxsat yoza olmaydi, shuning uchun u server funksiyasi orqali
+	// yaratadi. Ega esa to'g'ridan-to'g'ri yozaveradi (tezroq).
+	if (!isOwner) {
+		const out = await callFn({ action: 'contact', name, info });
+		return { id: out.id, name, info: info || '', createdAt: Date.parse(out.createdAt), entries: [] };
 	}
 
 	const row = await request('POST', `${base}/${CFG.contacts}/rows`, {
 		rowId: 'unique()',
-		data: { name, info: info || '' },
-		permissions: ownerOnly(userId),
+		data: { name, info: info || '', team_id: team.$id },
+		permissions: contactPerms(),
 	});
 	return { id: row.$id, name: row.name, info: row.info || '', createdAt: Date.parse(row.$createdAt), entries: [] };
 };
 
-export const updateContact = async (id, { name, info }) => {
-	if (guest) {
-		const all = gLoad();
-		const c = all.find((x) => x.id === id);
-		if (c) { c.name = name; c.info = info || ''; gSave(all); }
-		return c;
-	}
-	return request('PATCH', `${base}/${CFG.contacts}/rows/${id}`, { data: { name, info: info || '' } });
-};
+export const updateContact = (id, { name, info }) =>
+	request('PATCH', `${base}/${CFG.contacts}/rows/${id}`, { data: { name, info: info || '' } });
 
 export const deleteContact = async (id, entries) => {
-	if (guest) {
-		gSave(gLoad().filter((c) => c.id !== id));
-		return;
-	}
-	// Avval yozuvlar, keyin kontakt — aks holda egasiz yozuvlar qoladi
-	await Promise.all(entries.map((e) =>
-		request('DELETE', `${base}/${CFG.entries}/rows/${e.id}`).catch(() => {})));
-	return request('DELETE', `${base}/${CFG.contacts}/rows/${id}`);
+	// Yozuvlar o'chirilmaydi (ruxsat yo'q) — ular tarix sifatida qoladi,
+	// lekin kontaktsiz bo'lgani uchun hech qayerda ko'rinmaydi.
+	await request('DELETE', `${base}/${CFG.contacts}/rows/${id}`);
 };
 
-export const addEntry = async (userId, contactId, { kind, amount, note }) => {
-	if (guest) {
-		const e = { id: gid(), kind, amount, note: note || '', at: Date.now() };
-		const all = gLoad();
-		const c = all.find((x) => x.id === contactId);
-		if (c) { c.entries.push(e); gSave(all); }
-		return e;
-	}
-
+export const addEntry = async (_userId, contactId, { kind, amount, note }) => {
 	const row = await request('POST', `${base}/${CFG.entries}/rows`, {
 		rowId: 'unique()',
-		data: { contact_id: contactId, kind, amount, note: note || '' },
-		permissions: ownerOnly(userId),
+		data: {
+			contact_id: contactId, kind, amount, note: note || '',
+			by: me.$id, by_name: me.name || me.email, team_id: team.$id,
+		},
+		permissions: entryPerms(),
 	});
-	return { id: row.$id, kind: row.kind, amount: row.amount, note: row.note || '', at: Date.parse(row.$createdAt) };
+	return toEntry(row);
 };
 
-// --- Eslatmalar ---
-// Alohida jadval ochilmadi: eslatma — oddiy matn, kontaktsiz. Bepul
-// tarifda jadval soni cheklangani uchun brauzerda saqlanadi.
+// --- Sozlamalar (qulf daqiqasi) ---
 
-const NOTES_KEY = 'debtnote-notes';
+let settingsRow = null;
 
-export const loadNotes = () => {
-	try { return JSON.parse(localStorage.getItem(NOTES_KEY)) || []; } catch { return []; }
+export const loadSettings = async () => {
+	const rows = await listAll(CFG.settings, [
+		{ method: 'equal', attribute: 'team_id', values: [team.$id] },
+	]);
+	settingsRow = rows[0] || null;
+	return { lockMinutes: settingsRow?.lock_minutes ?? 10 };
 };
 
-export const saveNotes = (notes) => localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+export const saveSettings = async ({ lockMinutes }) => {
+	const data = { team_id: team.$id, lock_minutes: lockMinutes };
+
+	if (settingsRow) {
+		settingsRow = await request('PATCH', `${base}/${CFG.settings}/rows/${settingsRow.$id}`, {
+			data: { lock_minutes: lockMinutes },
+		});
+	} else {
+		settingsRow = await request('POST', `${base}/${CFG.settings}/rows`, {
+			rowId: 'unique()',
+			data,
+			// Sozlamani hamma o'qiydi, faqat ega o'zgartiradi
+			permissions: [
+				`read("team:${team.$id}")`,
+				`update("team:${team.$id}/owner")`,
+				`delete("team:${team.$id}/owner")`,
+			],
+		});
+	}
+	return { lockMinutes: settingsRow.lock_minutes };
+};
+
+// --- Jamoa a'zolari (kassirlar) ---
+
+export const members = async () => {
+	const { memberships } = await request('GET',
+		`${CFG.endpoint}/teams/${team.$id}/memberships?${Q([{ method: 'limit', values: [100] }])}`);
+	return memberships.map((m) => ({
+		id: m.userId,
+		membershipId: m.$id,
+		name: m.userName || m.userEmail,
+		email: m.userEmail,
+		owner: m.roles.includes('owner'),
+	}));
+};
+
+export const removeMember = (membershipId) =>
+	request('DELETE', `${CFG.endpoint}/teams/${team.$id}/memberships/${membershipId}`);
+
+// Kassir hisobini yaratish/parolini almashtirish.
+//
+// Server funksiyasi orqali: hisob yaratish API kalit talab qiladi, u esa
+// brauzerda bo'lishi mumkin emas. Funksiya chaqiruvchi shu jamoaning
+// egasi ekanini tekshiradi — begona odam boshqa restoranga kassir
+// qo'sha olmaydi.
+const callFn = async (payload) => {
+	const run = await request('POST', `${CFG.endpoint}/functions/kassir/executions`, {
+		body: JSON.stringify({ ...payload, teamId: team.$id }),
+		async: false, path: '/', method: 'POST',
+	});
+	const out = JSON.parse(run.responseBody || '{}');
+	if (run.responseStatusCode !== 200) throw new Error(out.error || `xato ${run.responseStatusCode}`);
+	return out;
+};
+
+export const addCashier = ({ login, password, name }) =>
+	callFn({ action: 'create', login, password, name });
+
+export const setCashierPassword = (userId, password) =>
+	callFn({ action: 'password', userId, password });
+
+// Kassir "aziz" deb kiradi, tizimda esa email saqlanadi
+export const LOGIN_DOMAIN = 'kassir.local';
+export const loginToEmail = (v) =>
+	v.includes('@') ? v : `${v.toLowerCase().trim()}@${LOGIN_DOMAIN}`;
+
+// --- Real vaqt ---
+//
+// Kassir kompyuterda yozuv qo'shsa, egasining telefonida ~0.5 soniyada
+// paydo bo'ladi — sahifani yangilash shart emas.
+
+export const subscribe = (onEntry) => {
+	const channel = `databases.${CFG.db}.tables.${CFG.entries}.rows`;
+	const qs = new URLSearchParams({ project: CFG.project });
+	qs.append('channels[]', channel);
+
+	let ws = null;
+	let retry = 0;
+	let closed = false;
+
+	const connect = () => {
+		if (closed) return;
+		ws = new WebSocket(`wss://fra.cloud.appwrite.io/v1/realtime?${qs}`);
+
+		ws.addEventListener('message', (ev) => {
+			const msg = JSON.parse(ev.data);
+			if (msg.type !== 'event') return;
+
+			const created = msg.data.events.some((e) => e.endsWith('.create'));
+			const row = msg.data.payload;
+			if (!created || row.team_id !== team.$id) return;
+
+			// O'zi yozgan yozuv allaqachon ekranda — takrorlamaymiz
+			if (row.by === me.$id) return;
+
+			onEntry(toEntry(row), row.contact_id);
+		});
+
+		ws.addEventListener('open', () => { retry = 0; });
+
+		// Uzilsa qayta ulanadi — internet bir zum uzilgani ish to'xtatmasin
+		ws.addEventListener('close', () => {
+			if (closed) return;
+			retry = Math.min(retry + 1, 6);
+			setTimeout(connect, 1000 * 2 ** retry);
+		});
+	};
+
+	connect();
+	return () => { closed = true; ws?.close(); };
+};

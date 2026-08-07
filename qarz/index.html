@@ -32,10 +32,6 @@
 	</nav>
 
 	<div class="nav-right">
-		<span class="guest-tag" id="guest-tag" hidden>
-			<span data-t="guestMode">Sinov rejimi</span>
-			<button class="link-inline" id="guest-login" data-t="signIn">Kirish</button>
-		</span>
 		<span class="who" id="nav-who"></span>
 		<button class="ico" data-calc title="Kalkulyator">
 			<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h4M9 6v4M14 8h3M14 14h3M7 14h4M7 17h4"/></svg>
@@ -55,8 +51,8 @@
 				<input class="inp" id="l-name" autocomplete="name">
 			</div>
 			<div class="f-group">
-				<label for="l-email" data-t="email">Email</label>
-				<input class="inp" id="l-email" type="email" autocomplete="email" required>
+				<label for="l-email" data-t="emailOrLogin">Email yoki login</label>
+				<input class="inp" id="l-email" autocomplete="username" required>
 			</div>
 			<div class="f-group">
 				<label for="l-pass" data-t="password">Parol</label>
@@ -68,7 +64,6 @@
 		</form>
 
 		<button class="link-btn" id="l-switch" data-t="noAccount">Hisobingiz yo‘qmi? Ro‘yxatdan o‘tish</button>
-		<button class="link-btn" id="l-guest" data-t="tryFree">Kirishsiz sinab ko‘rish</button>
 	</div>
 </section>
 
@@ -138,9 +133,10 @@
 				<table class="hist">
 					<thead>
 						<tr>
-							<th style="width:160px" data-t="colAmount">Summa</th>
+							<th style="width:150px" data-t="colAmount">Summa</th>
 							<th data-t="colInfo">Ma‘lumot</th>
-							<th style="width:170px" data-t="colDate">Sana</th>
+							<th style="width:120px" data-t="colBy">Kim yozdi</th>
+							<th style="width:150px" data-t="colDate">Sana</th>
 							<th style="width:40px"></th>
 						</tr>
 					</thead>
@@ -156,9 +152,32 @@
 <section class="screen" id="s-notes">
 	<div class="narrow">
 		<div class="sec-head">
-			<h1 class="sec-title" data-t="notes">Eslatmalar</h1>
-			<button class="btn-dark" data-new-note data-t="newNote">+ Yangi eslatma</button>
+			<h1 class="sec-title" id="act-title" data-t="activity">Kunlik faoliyat</h1>
 		</div>
+
+		<div class="day-bar">
+			<button class="ico" id="day-prev" title="Oldingi kun">
+				<svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+			</button>
+			<span class="day-label" id="day-label">Bugun</span>
+			<button class="ico" id="day-next" title="Keyingi kun">
+				<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+			</button>
+			<select class="inp day-select" id="day-cashier"></select>
+		</div>
+
+		<div class="two-sum">
+			<div><div class="ts-label" data-t="dayDebt">Qarz berildi</div><div class="ts-num neg" id="day-debt">0</div></div>
+			<div><div class="ts-label" data-t="dayPaid">To‘lov olindi</div><div class="ts-num" id="day-loan">0</div></div>
+			<div><div class="ts-label" data-t="dayCount">Amallar</div><div class="ts-num" id="day-count">0</div></div>
+			<div><div class="ts-label" data-t="dayClosed">Qarzdan qutildi</div><div class="ts-num zero" id="day-closed">0</div></div>
+		</div>
+
+		<div class="closed-box" id="closed-box" hidden>
+			<span class="closed-title" data-t="closedToday">Qarzini butunlay yopdi:</span>
+			<span id="closed-names"></span>
+		</div>
+
 		<div id="note-list"></div>
 	</div>
 </section>
@@ -166,7 +185,7 @@
 <!-- ══════════ HISOBOTLAR ══════════ -->
 <section class="screen" id="s-reports">
 	<div class="narrow">
-		<div class="sec-head"><h1 class="sec-title" data-t="reports">Hisobotlar</h1></div>
+		<div class="sec-head"><h1 class="sec-title" id="rep-title" data-t="reports">Hisobotlar</h1></div>
 
 		<div class="rep-group">
 			<div class="rep-row">
@@ -223,6 +242,31 @@
 		<div class="rep-group">
 			<button class="set-row as-btn" id="set-export"><span data-t="backup">Zaxira nusxa</span><span class="chev">›</span></button>
 			<button class="set-row as-btn" id="set-import"><span data-t="restore">Zaxiradan tiklash</span><span class="chev">›</span></button>
+		</div>
+
+		<div id="owner-only" hidden>
+			<div class="rep-group">
+				<label class="set-row">
+					<span data-t="lockAfter">Harakatsizlikda qulflash</span>
+					<select id="set-lock">
+						<option value="0">—</option>
+						<option value="1">1 daq</option>
+						<option value="2">2 daq</option>
+						<option value="5">5 daq</option>
+						<option value="10">10 daq</option>
+						<option value="15">15 daq</option>
+						<option value="30">30 daq</option>
+						<option value="60">60 daq</option>
+					</select>
+				</label>
+			</div>
+
+			<div class="sec-head" style="margin:22px 0 8px">
+				<div class="sec-sub" style="margin:0" data-t="cashiers">Kassirlar</div>
+				<button class="btn-dark" id="add-cashier" data-t="addCashier">+ Kassir</button>
+			</div>
+			<div class="rep-group" id="member-list"></div>
+			<p class="foot-note" data-t="cashierHint">Kassirga login va parol berasiz — u shu bilan kiradi.</p>
 		</div>
 
 		<div class="rep-group">
@@ -316,6 +360,50 @@
 		<button class="sheet-item" data-r="month" data-t="month">Oxirgi 30 kun</button>
 		<button class="sheet-item" data-r="year" data-t="year">Oxirgi 1 yil</button>
 		<button class="sheet-close" data-sheet-close data-t="close">Yopish</button>
+	</div>
+</div>
+
+<!-- ══════════ Yangi kassir ══════════ -->
+<div class="sheet" id="cashiersheet" hidden>
+	<div class="sheet-card">
+		<div class="sheet-title" data-t="addCashier">Kassir qo‘shish</div>
+		<div class="sheet-body">
+			<div class="f-group">
+				<label for="k-name" data-t="name">Ism</label>
+				<input class="inp" id="k-name" style="width:100%" placeholder="Aziz">
+			</div>
+			<div class="f-group">
+				<label for="k-login" data-t="login">Login</label>
+				<input class="inp" id="k-login" style="width:100%" placeholder="aziz" autocomplete="off">
+			</div>
+			<div class="f-group">
+				<label for="k-pass" data-t="password">Parol</label>
+				<input class="inp" id="k-pass" style="width:100%" autocomplete="new-password">
+			</div>
+			<p class="foot-note" data-t="cashierNote">Kassir shu login va parol bilan kiradi. Email kerak emas.</p>
+			<p class="login-err" id="k-err" hidden></p>
+			<button class="btn-dark btn-block" id="k-save" data-t="save">Saqlash</button>
+		</div>
+		<button class="sheet-close" data-sheet-close data-t="cancel">Bekor qilish</button>
+	</div>
+</div>
+
+<!-- ══════════ Qulf ekrani ══════════ -->
+<!-- Kassa kompyuteri ochiq qolib ketmasin. Ish to'xtamaydi — parol
+     kiritilsa o'sha joyidan davom etadi. -->
+<div class="lock" id="lock" hidden>
+	<div class="lock-card">
+		<svg class="lock-ico" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
+		<div class="lock-title" data-t="locked">Qulflangan</div>
+		<div class="lock-who" id="lock-who"></div>
+
+		<form id="lock-form">
+			<input class="inp" id="lock-pass" type="password" data-t-ph="password" placeholder="Parol" autocomplete="current-password">
+			<p class="login-err" id="lock-err" hidden data-t="badPass">Parol noto‘g‘ri</p>
+			<button class="btn-dark btn-block" id="lock-open" type="submit" data-t="unlock">Ochish</button>
+		</form>
+
+		<button class="link-btn" id="lock-switch" data-t="otherAccount">Boshqa hisob bilan kirish</button>
 	</div>
 </div>
 
