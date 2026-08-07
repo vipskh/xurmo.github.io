@@ -7,6 +7,7 @@
 // va foydalanuvchiga aytiladi.
 
 import * as store from './store.js';
+import { t, lang, setLang, applyLang, LANGS } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
@@ -107,7 +108,7 @@ const renderList = () => {
 	const list = sortContacts(db.contacts).filter((c) => matches(c, q));
 
 	if (!list.length) {
-		$('contact-list').innerHTML = `<p class="empty">${db.contacts.length ? 'Topilmadi.' : 'Kontakt yo‘q.'}</p>`;
+		$('contact-list').innerHTML = `<p class="empty">${t(db.contacts.length ? 'notFound' : 'noContacts')}</p>`;
 		return;
 	}
 
@@ -144,10 +145,11 @@ const openContact = (id) => {
 
 	$('pane-empty').hidden = true;
 	$('detail-inner').hidden = false;
+	$('detail-pane').classList.add('is-open');   // telefonda o'ngdan chiqadi
 
 	$('c-name').textContent = c.name;
 	$('c-info').textContent = c.info || '';
-	$('c-reg').textContent = `Registration: ${dt(c.createdAt)}`;
+	$('c-reg').textContent = `${t('registration')}: ${dt(c.createdAt)}`;
 
 	const { debt, loan, balance } = sums(c);
 	$('c-balance').textContent = money(balance);
@@ -159,7 +161,7 @@ const openContact = (id) => {
 		<tr class="${e.kind}">
 			<td class="h-amt ${e.kind === 'debt' ? 'neg' : ''}">${e.kind === 'debt' ? '−' : '+'}${plain(e.amount)}</td>
 			<td class="h-note">${esc(e.note) || '—'}</td>
-			<td class="h-date">${dt(e.at)}${e.pending ? ' · saqlanmoqda' : ''}</td>
+			<td class="h-date">${dt(e.at)}${e.pending ? ` · ${t('pendingMark')}` : ''}</td>
 			<td><button class="i-btn" data-info="${e.id}">
 				<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
 			</button></td>
@@ -203,7 +205,7 @@ $('c-save').addEventListener('click', async () => {
 		Object.assign(temp, saved, { pending: false });
 	} catch (e) {
 		c.entries = c.entries.filter((x) => x !== temp);
-		alert(`Saqlanmadi: ${e.message}`);
+		alert(`${t('saveFail')}: ${e.message}`);
 	}
 	if (openId === c.id) openContact(c.id);
 });
@@ -236,7 +238,7 @@ $('n-save').addEventListener('click', async () => {
 	// lekin bu kamdan-kam amal (yozuv qo'shish esa darhol)
 	const btn = $('n-save');
 	btn.disabled = true;
-	btn.textContent = 'Saqlanmoqda…';
+	btn.textContent = t('saving');
 
 	try {
 		const c = await store.addContact(user.$id, { name, info });
@@ -245,10 +247,10 @@ $('n-save').addEventListener('click', async () => {
 		closeSheets();
 		openContact(c.id);
 	} catch (e) {
-		alert(`Saqlab bo'lmadi: ${e.message}`);
+		alert(`${t('saveFail')}: ${e.message}`);
 	} finally {
 		btn.disabled = false;
-		btn.textContent = 'Save';
+		btn.textContent = t('save');
 	}
 });
 
@@ -260,9 +262,9 @@ $('c-menu').addEventListener('click', () => openSheet('ctxsheet'));
 
 $('ctx-edit').addEventListener('click', async () => {
 	const c = byId(openId);
-	const name = prompt('Ism:', c.name);
+	const name = prompt(`${t('name')}:`, c.name);
 	if (name === null) return;
-	const info = prompt('Information:', c.info || '');
+	const info = prompt(`${t('information')}:`, c.info || '');
 	if (info === null) return;
 	closeSheets();
 
@@ -276,7 +278,7 @@ $('ctx-edit').addEventListener('click', async () => {
 	} catch (e) {
 		Object.assign(c, before);
 		openContact(c.id);
-		alert(`Saqlanmadi: ${e.message}`);
+		alert(`${t('saveFail')}: ${e.message}`);
 	}
 });
 
@@ -288,7 +290,7 @@ $('ctx-clear').addEventListener('click', async () => {
 	closeSheets();
 	if (!balance) return;
 
-	const data = { kind: balance < 0 ? 'loan' : 'debt', amount: Math.abs(balance), note: 'Hisob yopildi' };
+	const data = { kind: balance < 0 ? 'loan' : 'debt', amount: Math.abs(balance), note: t('accountClosed') };
 	const temp = { id: `tmp-${Date.now()}`, ...data, at: Date.now(), pending: true };
 	c.entries.push(temp);
 	openContact(c.id);
@@ -297,14 +299,14 @@ $('ctx-clear').addEventListener('click', async () => {
 		Object.assign(temp, await store.addEntry(user.$id, c.id, data), { pending: false });
 	} catch (e) {
 		c.entries = c.entries.filter((x) => x !== temp);
-		alert(`Saqlanmadi: ${e.message}`);
+		alert(`${t('saveFail')}: ${e.message}`);
 	}
 	openContact(c.id);
 });
 
 $('ctx-del').addEventListener('click', async () => {
 	const c = byId(openId);
-	if (!confirm(`"${c.name}" butunlay o'chirilsinmi? Barcha yozuvlari ham ketadi.`)) return;
+	if (!confirm(`"${c.name}" ${t('deleteConfirm')}`)) return;
 	closeSheets();
 
 	const backup = c;
@@ -319,7 +321,7 @@ $('ctx-del').addEventListener('click', async () => {
 	} catch (e) {
 		db.contacts.push(backup);
 		renderList();
-		alert(`O'chirilmadi: ${e.message}`);
+		alert(`${t('deleteFail')}: ${e.message}`);
 	}
 });
 
@@ -334,11 +336,11 @@ $('c-history').addEventListener('click', (e) => {
 	if (!en) return;
 
 	$('det-body').innerHTML = `
-		<div><span>Turi</span><span class="${en.kind === 'debt' ? 'neg' : ''}">${en.kind === 'debt' ? 'Debt' : 'Loan'}</span></div>
-		<div><span>Summa</span><span>${en.kind === 'debt' ? '−' : '+'}${plain(en.amount)}</span></div>
-		<div><span>Sana</span><span>${dt(en.at)}</span></div>
-		<div><span>Information</span><span>${esc(en.note) || '—'}</span></div>
-		<div><span>Kontakt</span><span>${esc(c.name)}</span></div>`;
+		<div><span>${t('kind')}</span><span class="${en.kind === 'debt' ? 'neg' : ''}">${t(en.kind)}</span></div>
+		<div><span>${t('colAmount')}</span><span>${en.kind === 'debt' ? '−' : '+'}${plain(en.amount)}</span></div>
+		<div><span>${t('colDate')}</span><span>${dt(en.at)}</span></div>
+		<div><span>${t('information')}</span><span>${esc(en.note) || '—'}</span></div>
+		<div><span>${t('contact')}</span><span>${esc(c.name)}</span></div>`;
 	openSheet('infosheet');
 });
 
@@ -358,7 +360,7 @@ $('sortsheet').addEventListener('click', (e) => {
 
 const renderNotes = () => {
 	if (!db.notes.length) {
-		$('note-list').innerHTML = '<p class="empty">Eslatma yo‘q.</p>';
+		$('note-list').innerHTML = `<p class="empty">${t('noNotes')}</p>`;
 		return;
 	}
 	$('note-list').innerHTML = [...db.notes].sort((a, b) => b.at - a.at).map((n) => `
@@ -371,7 +373,7 @@ const renderNotes = () => {
 };
 
 document.querySelector('[data-new-note]').addEventListener('click', () => {
-	const text = prompt('Eslatma:');
+	const text = prompt(t('notePrompt'));
 	if (!text?.trim()) return;
 	db.notes.push({ id: Date.now().toString(36), text: text.trim(), at: Date.now() });
 	store.saveNotes(db.notes);
@@ -389,7 +391,7 @@ $('note-list').addEventListener('click', (e) => {
 // ---------- Reports ----------
 
 const RANGE_MS = { today: 864e5, week: 6048e5, month: 2592e6, year: 31536e6 };
-const RANGE_LABEL = { all: 'All Time', today: 'Bugun', week: 'Oxirgi 7 kun', month: 'Oxirgi 30 kun', year: 'Oxirgi 1 yil' };
+const RANGE_KEY = { all: 'allTime', today: 'today', week: 'week', month: 'month', year: 'year' };
 
 const totals = (r) => {
 	let debt = 0, loan = 0;
@@ -406,7 +408,7 @@ const renderReports = () => {
 	const a = totals(ranges.a);
 	$('r-total-debts').textContent = a.debt ? `−${plain(a.debt)}` : `0 ${db.cur}`;
 	$('r-total-loans').textContent = a.loan ? `+${plain(a.loan)}` : `0 ${db.cur}`;
-	$('r-range-a').textContent = RANGE_LABEL[ranges.a];
+	$('r-range-a').textContent = t(RANGE_KEY[ranges.a]);
 
 	const b = totals(ranges.b);
 	$('r-taken').textContent = b.debt ? `−${plain(b.debt)}` : `0 ${db.cur}`;
@@ -414,7 +416,7 @@ const renderReports = () => {
 	const diff = b.loan - b.debt;
 	$('r-diff').textContent = money(diff);
 	$('r-diff').className = `rep-val ${diff < 0 ? 'neg' : ''}`;
-	$('r-range-b').textContent = RANGE_LABEL[ranges.b];
+	$('r-range-b').textContent = t(RANGE_KEY[ranges.b]);
 };
 
 let rangeTarget = 'a';
@@ -438,6 +440,19 @@ $('set-cur').addEventListener('change', () => {
 	if (openId) openContact(openId);
 });
 
+// Til ro'yxatini to'ldiramiz
+$('set-lang').innerHTML = Object.entries(LANGS)
+	.map(([code, name]) => `<option value="${code}">${name}</option>`).join('');
+$('set-lang').value = lang;
+
+$('set-lang').addEventListener('change', () => {
+	setLang($('set-lang').value);
+	// Dinamik chizilgan joylar ham yangilanishi kerak
+	renderList(); renderNotes(); renderReports();
+	if (openId) openContact(openId);
+	syncLoginText();
+});
+
 $('set-export').addEventListener('click', () => {
 	const blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
 	const a = document.createElement('a');
@@ -455,7 +470,7 @@ $('set-import').addEventListener('click', () => {
 		try {
 			const data = JSON.parse(await inp.files[0].text());
 			if (!Array.isArray(data.contacts)) throw new Error('format');
-			if (!confirm(`${data.contacts.length} ta kontakt qo'shiladi. Mavjudlari o'chmaydi.`)) return;
+			if (!confirm(`${data.contacts.length} ${t('restoreConfirm')}`)) return;
 
 			for (const c of data.contacts) {
 				const fresh = await store.addContact(user.$id, { name: c.name, info: c.info });
@@ -465,9 +480,9 @@ $('set-import').addEventListener('click', () => {
 				db.contacts.push(fresh);
 			}
 			renderList();
-			alert('Tiklandi.');
+			alert(t('restored'));
 		} catch (e) {
-			alert(`Fayl o'qilmadi: ${e.message}`);
+			alert(`${t('fileFail')}: ${e.message}`);
 		}
 	};
 	inp.click();
@@ -520,13 +535,17 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet
 
 let signupMode = false;
 
+const syncLoginText = () => {
+	$('name-row').hidden = !signupMode;
+	$('login-sub').textContent = t(signupMode ? 'subSignUp' : 'subSignIn');
+	$('l-submit').textContent = t(signupMode ? 'signUp' : 'signIn');
+	$('l-switch').textContent = t(signupMode ? 'haveAccount' : 'noAccount');
+	$('l-pass').autocomplete = signupMode ? 'new-password' : 'current-password';
+};
+
 $('l-switch').addEventListener('click', () => {
 	signupMode = !signupMode;
-	$('name-row').hidden = !signupMode;
-	$('login-sub').textContent = signupMode ? 'Yangi hisob yarating' : 'Hisobingizga kiring';
-	$('l-submit').textContent = signupMode ? 'Ro‘yxatdan o‘tish' : 'Kirish';
-	$('l-switch').textContent = signupMode ? 'Hisobingiz bormi? Kirish' : 'Hisobingiz yo‘qmi? Ro‘yxatdan o‘tish';
-	$('l-pass').autocomplete = signupMode ? 'new-password' : 'current-password';
+	syncLoginText();
 	$('login-err').hidden = true;
 });
 
@@ -537,32 +556,52 @@ $('login-form').addEventListener('submit', async (e) => {
 	const err = $('login-err');
 	err.hidden = true;
 	btn.disabled = true;
-	btn.textContent = 'Kutilmoqda…';
+	btn.textContent = t('waiting');
 
 	try {
 		const email = $('l-email').value.trim();
 		const pass = $('l-pass').value;
 		if (signupMode) {
-			if (pass.length < 8) throw new Error('Parol kamida 8 belgidan iborat bo‘lsin');
+			if (pass.length < 8) throw new Error(t('passShort'));
 			await store.register(email, pass, $('l-name').value.trim() || email);
 		} else {
 			await store.login(email, pass);
 		}
 		await start();
 	} catch (ex) {
-		err.textContent = ex.type === 'user_invalid_credentials' ? 'Email yoki parol noto‘g‘ri'
-			: ex.type === 'user_already_exists' ? 'Bu email allaqachon ro‘yxatdan o‘tgan'
+		err.textContent = ex.type === 'user_invalid_credentials' ? t('badCreds')
+			: ex.type === 'user_already_exists' ? t('emailExists')
 			: ex.message;
 		err.hidden = false;
 	} finally {
 		btn.disabled = false;
-		btn.textContent = signupMode ? 'Ro‘yxatdan o‘tish' : 'Kirish';
+		btn.textContent = t(signupMode ? 'signUp' : 'signIn');
 	}
 });
 
 // ---------- Ishga tushirish ----------
 
+// Telefonda tafsilot panelini yopish (kompyuterda tugma ko'rinmaydi)
+const closeDetail = () => {
+	$('detail-pane').classList.remove('is-open');
+	openId = null;
+	renderList();
+};
+
+$('c-back').addEventListener('click', closeDetail);
+
+// Telefonda "orqaga" tugmasi ham panelni yopsin, saytdan chiqarmasin
+window.addEventListener('popstate', () => {
+	if ($('detail-pane').classList.contains('is-open')) {
+		closeDetail();
+		history.pushState(null, '', location.href);
+	}
+});
+
 const start = async () => {
+	applyLang();
+	history.pushState(null, '', location.href);
+
 	user = await store.me();
 	if (!user) { show('login'); return; }
 
@@ -571,14 +610,14 @@ const start = async () => {
 	$('set-who').textContent = user.email;
 	$('nav-who').textContent = user.email;
 
-	$('contact-list').innerHTML = '<p class="loading">Yuklanmoqda…</p>';
+	$('contact-list').innerHTML = `<p class="loading">${t('loading')}</p>`;
 	show('debts');
 
 	try {
 		db.contacts = await store.fetchAll();
 		db.notes = store.loadNotes();
 	} catch (e) {
-		$('contact-list').innerHTML = `<p class="empty">Yuklab bo‘lmadi: ${esc(e.message)}</p>`;
+		$('contact-list').innerHTML = `<p class="empty">${t('loadFail')}: ${esc(e.message)}</p>`;
 		return;
 	}
 

@@ -15,19 +15,19 @@
 	<nav class="tabs" id="tabs">
 		<button class="tab is-on" data-tab="debts">
 			<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M14.5 9.5c0-1-1-1.6-2.5-1.6s-2.5.7-2.5 1.7 1 1.4 2.5 1.7 2.6.7 2.6 1.8-1.1 1.7-2.6 1.7-2.5-.6-2.5-1.6"/></svg>
-			<span>Debts</span>
+			<span data-t="debts">Qarzlar</span>
 		</button>
 		<button class="tab" data-tab="notes">
 			<svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/></svg>
-			<span>Notes</span>
+			<span data-t="notes">Eslatmalar</span>
 		</button>
 		<button class="tab" data-tab="reports">
 			<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h5M8 12l1.5 1.5L13 10M8 16.5h5"/></svg>
-			<span>Reports</span>
+			<span data-t="reports">Hisobotlar</span>
 		</button>
 		<button class="tab" data-tab="settings">
 			<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-2.9 1.2v.2a2 2 0 11-4 0V21a1.7 1.7 0 00-2.9-1.2l-.1.1a2 2 0 11-2.8-2.8l.1-.1A1.7 1.7 0 003 15H3a2 2 0 110-4h.1A1.7 1.7 0 004.3 8l-.1-.1a2 2 0 112.8-2.8l.1.1A1.7 1.7 0 0010 4.1V4a2 2 0 114 0v.1a1.7 1.7 0 002.9 1.2l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 001.2 2.9H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
-			<span>Settings</span>
+			<span data-t="settings">Sozlamalar</span>
 		</button>
 	</nav>
 
@@ -43,41 +43,41 @@
 <section class="screen is-on" id="s-login">
 	<div class="login-wrap">
 		<h1 class="login-brand">Debt Note</h1>
-		<p class="login-sub" id="login-sub">Hisobingizga kiring</p>
+		<p class="login-sub" id="login-sub" data-t="subSignIn">Hisobingizga kiring</p>
 
 		<form id="login-form" autocomplete="on">
 			<div class="f-group" id="name-row" hidden>
-				<label for="l-name">Ismingiz</label>
+				<label for="l-name" data-t="yourName">Ismingiz</label>
 				<input class="inp" id="l-name" autocomplete="name">
 			</div>
 			<div class="f-group">
-				<label for="l-email">Email</label>
+				<label for="l-email" data-t="email">Email</label>
 				<input class="inp" id="l-email" type="email" autocomplete="email" required>
 			</div>
 			<div class="f-group">
-				<label for="l-pass">Parol</label>
+				<label for="l-pass" data-t="password">Parol</label>
 				<input class="inp" id="l-pass" type="password" autocomplete="current-password" required>
 			</div>
 
 			<p class="login-err" id="login-err" hidden></p>
-			<button class="btn-dark btn-block" id="l-submit" type="submit">Kirish</button>
+			<button class="btn-dark btn-block" id="l-submit" type="submit" data-t="signIn">Kirish</button>
 		</form>
 
-		<button class="link-btn" id="l-switch">Hisobingiz yo‘qmi? Ro‘yxatdan o‘tish</button>
+		<button class="link-btn" id="l-switch" data-t="noAccount">Hisobingiz yo‘qmi? Ro‘yxatdan o‘tish</button>
 	</div>
 </section>
 
-<!-- ══════════ DEBTS ══════════ -->
+<!-- ══════════ QARZLAR ══════════ -->
 <section class="screen" id="s-debts">
 	<div class="split">
 
 		<aside class="list-pane">
 			<div class="list-head">
-				<input class="search-inp" id="q" placeholder="Qidirish…" autocomplete="off">
+				<input class="search-inp" id="q" data-t-ph="searchPh" placeholder="Qidirish…" autocomplete="off">
 				<button class="ico" data-sort title="Saralash">
 					<svg viewBox="0 0 24 24"><path d="M4 7h16M7 12h10M10 17h4"/></svg>
 				</button>
-				<button class="btn-dark" data-new-contact>+ Yangi</button>
+				<button class="btn-dark" data-new-contact data-t="newBtn">+ Yangi</button>
 			</div>
 			<div class="contacts" id="contact-list"></div>
 		</aside>
@@ -85,12 +85,16 @@
 		<div class="detail-pane" id="detail-pane">
 			<div class="pane-empty" id="pane-empty">
 				<svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 9h16M9 9v10"/></svg>
-				<span>Chapdan kontakt tanlang</span>
+				<span data-t="selectContact">Chapdan kontakt tanlang</span>
 			</div>
 
 			<div class="detail-inner" id="detail-inner" hidden>
 				<div class="d-head">
-					<div>
+					<!-- Telefonda panel o'ngdan chiqadi — orqaga tugmasi shu yerda -->
+					<button class="ico back-btn" id="c-back" title="Orqaga">
+						<svg viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
+					</button>
+					<div class="d-titles">
 						<h1 class="d-name" id="c-name">—</h1>
 						<div class="d-sub">
 							<span id="c-info"></span>
@@ -98,7 +102,7 @@
 						</div>
 					</div>
 					<div class="d-bal">
-						<div class="d-bal-label">Balance</div>
+						<div class="d-bal-label" data-t="balance">Balans</div>
 						<div class="d-bal-num" id="c-balance">0</div>
 					</div>
 					<button class="ico" id="c-menu" title="Amallar">
@@ -109,29 +113,29 @@
 				<div class="entry-row">
 					<div class="seg" id="c-seg">
 						<button class="on" data-kind="debt">
-							<svg viewBox="0 0 24 24" class="chk"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>Debt
+							<svg viewBox="0 0 24 24" class="chk"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg><span data-t="debt">Qarz</span>
 						</button>
 						<button data-kind="loan">
-							<svg viewBox="0 0 24 24" class="chk"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>Loan
+							<svg viewBox="0 0 24 24" class="chk"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg><span data-t="loan">To‘lov</span>
 						</button>
 					</div>
 					<input class="inp inp-amount" id="c-amount" inputmode="decimal" placeholder="0" autocomplete="off">
-					<input class="inp inp-note" id="c-note" placeholder="Information" autocomplete="off">
-					<button class="btn-dark" id="c-save">Save</button>
+					<input class="inp inp-note" id="c-note" data-t-ph="informationPh" placeholder="Ma‘lumot" autocomplete="off">
+					<button class="btn-dark" id="c-save" data-t="save">Saqlash</button>
 				</div>
-				<div class="hint">Summani yozib <kbd>Enter</kbd> bosing</div>
+				<div class="hint"><span data-t="enterHint1">Summani yozib</span> <kbd>Enter</kbd> <span data-t="enterHint2">bosing</span></div>
 
 				<div class="two-sum">
-					<div><div class="ts-label">Jami qarz</div><div class="ts-num neg" id="c-sum-debt">0</div></div>
-					<div><div class="ts-label">Jami to‘lov</div><div class="ts-num" id="c-sum-loan">0</div></div>
+					<div><div class="ts-label" data-t="totalDebt">Jami qarz</div><div class="ts-num neg" id="c-sum-debt">0</div></div>
+					<div><div class="ts-label" data-t="totalPay">Jami to‘lov</div><div class="ts-num" id="c-sum-loan">0</div></div>
 				</div>
 
 				<table class="hist">
 					<thead>
 						<tr>
-							<th style="width:160px">Summa</th>
-							<th>Information</th>
-							<th style="width:170px">Sana</th>
+							<th style="width:160px" data-t="colAmount">Summa</th>
+							<th data-t="colInfo">Ma‘lumot</th>
+							<th style="width:170px" data-t="colDate">Sana</th>
 							<th style="width:40px"></th>
 						</tr>
 					</thead>
@@ -143,110 +147,110 @@
 	</div>
 </section>
 
-<!-- ══════════ NOTES ══════════ -->
+<!-- ══════════ ESLATMALAR ══════════ -->
 <section class="screen" id="s-notes">
 	<div class="narrow">
 		<div class="sec-head">
-			<h1 class="sec-title">Notes</h1>
-			<button class="btn-dark" data-new-note>+ Yangi eslatma</button>
+			<h1 class="sec-title" data-t="notes">Eslatmalar</h1>
+			<button class="btn-dark" data-new-note data-t="newNote">+ Yangi eslatma</button>
 		</div>
 		<div id="note-list"></div>
 	</div>
 </section>
 
-<!-- ══════════ REPORTS ══════════ -->
+<!-- ══════════ HISOBOTLAR ══════════ -->
 <section class="screen" id="s-reports">
 	<div class="narrow">
-		<div class="sec-head"><h1 class="sec-title">Reports</h1></div>
+		<div class="sec-head"><h1 class="sec-title" data-t="reports">Hisobotlar</h1></div>
 
 		<div class="rep-group">
 			<div class="rep-row">
 				<svg class="rep-ico" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 11h20M4 4l16 16"/></svg>
-				<div><div class="rep-label">Total Debts</div><div class="rep-val neg" id="r-total-debts">0</div></div>
+				<div><div class="rep-label" data-t="totalDebts">Umumiy qarz</div><div class="rep-val neg" id="r-total-debts">0</div></div>
 			</div>
 			<div class="rep-row">
 				<svg class="rep-ico" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 11h20"/></svg>
-				<div><div class="rep-label">Total Loans</div><div class="rep-val" id="r-total-loans">0</div></div>
+				<div><div class="rep-label" data-t="totalLoans">Umumiy to‘lov</div><div class="rep-val" id="r-total-loans">0</div></div>
 			</div>
 			<div class="rep-row" data-range="a">
 				<svg class="rep-ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
-				<div><div class="rep-label">Date Range</div><div class="rep-val sm" id="r-range-a">All Time</div></div>
+				<div><div class="rep-label" data-t="dateRange">Sana oralig‘i</div><div class="rep-val sm" id="r-range-a">Butun vaqt</div></div>
 			</div>
 		</div>
 
 		<div class="rep-group">
 			<div class="rep-row">
 				<svg class="rep-ico" viewBox="0 0 24 24"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6M4 4l16 16"/></svg>
-				<div><div class="rep-label">Taken Debts</div><div class="rep-val neg" id="r-taken">0</div></div>
+				<div><div class="rep-label" data-t="takenDebts">Olingan qarz</div><div class="rep-val neg" id="r-taken">0</div></div>
 			</div>
 			<div class="rep-row">
 				<svg class="rep-ico" viewBox="0 0 24 24"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-				<div><div class="rep-label">Given Loans</div><div class="rep-val" id="r-given">0</div></div>
+				<div><div class="rep-label" data-t="givenLoans">Berilgan to‘lov</div><div class="rep-val" id="r-given">0</div></div>
 			</div>
 			<div class="rep-row">
 				<svg class="rep-ico" viewBox="0 0 24 24"><path d="M2 13l4 4L14 8M10 15l3 3 9-10"/></svg>
-				<div><div class="rep-label">Differences</div><div class="rep-val" id="r-diff">0</div></div>
+				<div><div class="rep-label" data-t="differences">Farq</div><div class="rep-val" id="r-diff">0</div></div>
 			</div>
 			<div class="rep-row" data-range="b">
 				<svg class="rep-ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
-				<div><div class="rep-label">Date Range</div><div class="rep-val sm" id="r-range-b">All Time</div></div>
+				<div><div class="rep-label" data-t="dateRange">Sana oralig‘i</div><div class="rep-val sm" id="r-range-b">Butun vaqt</div></div>
 			</div>
 		</div>
 	</div>
 </section>
 
-<!-- ══════════ SETTINGS ══════════ -->
+<!-- ══════════ SOZLAMALAR ══════════ -->
 <section class="screen" id="s-settings">
 	<div class="narrow">
-		<div class="sec-head"><h1 class="sec-title">Settings</h1></div>
+		<div class="sec-head"><h1 class="sec-title" data-t="settings">Sozlamalar</h1></div>
 
 		<div class="rep-group">
 			<label class="set-row">
-				<span>Valyuta</span>
+				<span data-t="currency">Valyuta</span>
 				<select id="set-cur"><option>$</option><option>so'm</option><option>₽</option><option>€</option></select>
 			</label>
 			<label class="set-row">
-				<span>Til</span>
-				<select id="set-lang"><option>O'zbekcha</option><option>Русский</option><option>English</option></select>
+				<span data-t="language">Til</span>
+				<select id="set-lang"></select>
 			</label>
 		</div>
 
 		<div class="rep-group">
-			<button class="set-row as-btn" id="set-export"><span>Zaxira nusxa — faylga saqlash</span><span class="chev">›</span></button>
-			<button class="set-row as-btn" id="set-import"><span>Zaxiradan tiklash</span><span class="chev">›</span></button>
+			<button class="set-row as-btn" id="set-export"><span data-t="backup">Zaxira nusxa</span><span class="chev">›</span></button>
+			<button class="set-row as-btn" id="set-import"><span data-t="restore">Zaxiradan tiklash</span><span class="chev">›</span></button>
 		</div>
 
 		<div class="rep-group">
-			<div class="set-row"><span>Hisob</span><span class="muted-val" id="set-who">—</span></div>
-			<button class="set-row as-btn danger" id="set-logout"><span>Chiqish</span><span class="chev">›</span></button>
+			<div class="set-row"><span data-t="account">Hisob</span><span class="muted-val" id="set-who">—</span></div>
+			<button class="set-row as-btn danger" id="set-logout"><span data-t="logout">Chiqish</span><span class="chev">›</span></button>
 		</div>
 
-		<p class="foot-note">Ma'lumot serverda saqlanadi — istalgan qurilmadan kirsangiz o'sha yerda turadi.</p>
+		<p class="foot-note" data-t="dataNote">Ma'lumot serverda saqlanadi.</p>
 	</div>
 </section>
 
 <!-- ══════════ Yangi kontakt ══════════ -->
 <div class="sheet" id="newsheet" hidden>
 	<div class="sheet-card">
-		<div class="sheet-title">New Contact</div>
+		<div class="sheet-title" data-t="newContact">Yangi kontakt</div>
 		<div class="sheet-body">
-			<div class="f-group"><label for="n-name">Name *</label><input class="inp" id="n-name" style="width:100%"></div>
-			<div class="f-group"><label for="n-info">Information</label><input class="inp" id="n-info" style="width:100%"></div>
+			<div class="f-group"><label for="n-name" data-t="name">Ism</label><input class="inp" id="n-name" style="width:100%"></div>
+			<div class="f-group"><label for="n-info" data-t="information">Ma‘lumot</label><input class="inp" id="n-info" style="width:100%"></div>
 
 			<div class="f-group">
-				<label>Turi</label>
+				<label data-t="kind">Turi</label>
 				<div class="seg" id="n-seg" style="display:inline-flex">
-					<button class="on" data-kind="debt"><svg viewBox="0 0 24 24" class="chk"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>Debt</button>
-					<button data-kind="loan"><svg viewBox="0 0 24 24" class="chk"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>Loan</button>
+					<button class="on" data-kind="debt"><svg viewBox="0 0 24 24" class="chk"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg><span data-t="debt">Qarz</span></button>
+					<button data-kind="loan"><svg viewBox="0 0 24 24" class="chk"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg><span data-t="loan">To‘lov</span></button>
 				</div>
 			</div>
 
-			<div class="f-group"><label for="n-amount">Amount *</label><input class="inp" id="n-amount" inputmode="decimal" style="width:100%"></div>
-			<div class="f-group"><label for="n-note">Information</label><input class="inp" id="n-note" style="width:100%"></div>
+			<div class="f-group"><label for="n-amount" data-t="amount">Summa</label><input class="inp" id="n-amount" inputmode="decimal" style="width:100%"></div>
+			<div class="f-group"><label for="n-note" data-t="information">Ma‘lumot</label><input class="inp" id="n-note" style="width:100%"></div>
 
-			<button class="btn-dark btn-block" id="n-save">Save</button>
+			<button class="btn-dark btn-block" id="n-save" data-t="save">Saqlash</button>
 		</div>
-		<button class="sheet-close" data-sheet-close>Bekor qilish</button>
+		<button class="sheet-close" data-sheet-close data-t="cancel">Bekor qilish</button>
 	</div>
 </div>
 
@@ -262,51 +266,51 @@
 			<button data-c="1">1</button><button data-c="2">2</button><button data-c="3">3</button><button data-c="+" class="fn">+</button>
 			<button data-c="0" class="wide">0</button><button data-c=".">.</button><button data-c="=" class="eq">=</button>
 		</div>
-		<button class="sheet-close" data-sheet-close>Yopish</button>
+		<button class="sheet-close" data-sheet-close data-t="close">Yopish</button>
 	</div>
 </div>
 
 <!-- ══════════ Saralash ══════════ -->
 <div class="sheet" id="sortsheet" hidden>
 	<div class="sheet-card">
-		<div class="sheet-title">Saralash</div>
-		<button class="sheet-item" data-s="recent">Oxirgi harakat bo'yicha</button>
-		<button class="sheet-item" data-s="name">Ism bo'yicha (A→Z)</button>
-		<button class="sheet-item" data-s="debt">Eng ko'p qarzdor</button>
-		<button class="sheet-item" data-s="loan">Eng ko'p bergan</button>
-		<button class="sheet-close" data-sheet-close>Yopish</button>
+		<div class="sheet-title" data-t="sort">Saralash</div>
+		<button class="sheet-item" data-s="recent" data-t="byRecent">Oxirgi harakat bo'yicha</button>
+		<button class="sheet-item" data-s="name" data-t="byName">Ism bo'yicha</button>
+		<button class="sheet-item" data-s="debt" data-t="byDebt">Eng ko'p qarzdor</button>
+		<button class="sheet-item" data-s="loan" data-t="byLoan">Eng ko'p bergan</button>
+		<button class="sheet-close" data-sheet-close data-t="close">Yopish</button>
 	</div>
 </div>
 
 <!-- ══════════ Kontakt amallari ══════════ -->
 <div class="sheet" id="ctxsheet" hidden>
 	<div class="sheet-card">
-		<button class="sheet-item" id="ctx-edit">Tahrirlash</button>
-		<button class="sheet-item" id="ctx-clear">Hisobni yopish (0 qilish)</button>
-		<button class="sheet-item danger" id="ctx-del">Kontaktni o'chirish</button>
-		<button class="sheet-close" data-sheet-close>Yopish</button>
+		<button class="sheet-item" id="ctx-edit" data-t="edit">Tahrirlash</button>
+		<button class="sheet-item" id="ctx-clear" data-t="closeAccount">Hisobni yopish</button>
+		<button class="sheet-item danger" id="ctx-del" data-t="deleteContact">Kontaktni o'chirish</button>
+		<button class="sheet-close" data-sheet-close data-t="close">Yopish</button>
 	</div>
 </div>
 
 <!-- ══════════ (i) tafsilot ══════════ -->
 <div class="sheet" id="infosheet" hidden>
 	<div class="sheet-card">
-		<div class="sheet-title">Yozuv tafsiloti</div>
+		<div class="sheet-title" data-t="entryDetails">Yozuv tafsiloti</div>
 		<div class="sheet-body det" id="det-body"></div>
-		<button class="sheet-close" data-sheet-close>Yopish</button>
+		<button class="sheet-close" data-sheet-close data-t="close">Yopish</button>
 	</div>
 </div>
 
 <!-- ══════════ Sana oralig'i ══════════ -->
 <div class="sheet" id="rangesheet" hidden>
 	<div class="sheet-card">
-		<div class="sheet-title">Sana oralig'i</div>
-		<button class="sheet-item" data-r="all">All Time</button>
-		<button class="sheet-item" data-r="today">Bugun</button>
-		<button class="sheet-item" data-r="week">Oxirgi 7 kun</button>
-		<button class="sheet-item" data-r="month">Oxirgi 30 kun</button>
-		<button class="sheet-item" data-r="year">Oxirgi 1 yil</button>
-		<button class="sheet-close" data-sheet-close>Yopish</button>
+		<div class="sheet-title" data-t="dateRange">Sana oralig'i</div>
+		<button class="sheet-item" data-r="all" data-t="allTime">Butun vaqt</button>
+		<button class="sheet-item" data-r="today" data-t="today">Bugun</button>
+		<button class="sheet-item" data-r="week" data-t="week">Oxirgi 7 kun</button>
+		<button class="sheet-item" data-r="month" data-t="month">Oxirgi 30 kun</button>
+		<button class="sheet-item" data-r="year" data-t="year">Oxirgi 1 yil</button>
+		<button class="sheet-close" data-sheet-close data-t="close">Yopish</button>
 	</div>
 </div>
 

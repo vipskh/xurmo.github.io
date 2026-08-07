@@ -171,7 +171,11 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round
 .pane-empty svg { width: 40px; height: 40px; opacity: .3; }
 
 .d-head { display: flex; align-items: flex-start; gap: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
-.d-name { font-size: 22px; font-weight: 800; margin: 0; }
+.d-titles { min-width: 0; }
+.d-name { font-size: 22px; font-weight: 800; margin: 0; word-break: break-word; }
+
+/* Orqaga tugmasi faqat telefonda kerak — kompyuterda ro'yxat yonda turadi */
+.back-btn { display: none; margin: -4px 0 0 -8px; flex-shrink: 0; }
 .d-sub { color: var(--muted); font-size: 13px; margin-top: 5px; display: flex; gap: 14px; flex-wrap: wrap; }
 .d-bal { margin-left: auto; text-align: right; flex-shrink: 0; }
 .d-bal-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
@@ -330,11 +334,45 @@ kbd { background: var(--panel-2); border: 1px solid var(--line); border-radius: 
 /* ---------- Tor ekran ---------- */
 
 @media (max-width: 900px) {
-	.split { grid-template-columns: 1fr; height: auto; }
-	.list-pane { border-right: none; border-bottom: 1px solid var(--line); max-height: 300px; }
-	.detail-inner { padding: 18px 16px 50px; }
+	.split { grid-template-columns: 1fr; height: calc(100vh - var(--nav-h)); }
+	.list-pane { border-right: none; }
+
+	/* Telefonda tafsilot pastda emas, O'NGDAN sirg'alib chiqadi va butun
+	   ekranni egallaydi — ro'yxat orqasida qoladi. Orqaga tugmasi bilan
+	   yopiladi. */
+	.detail-pane {
+		position: fixed;
+		inset: var(--nav-h) 0 0;
+		z-index: 25;
+		background: var(--bg);
+		transform: translateX(100%);
+		transition: transform .25s ease;
+		visibility: hidden;
+	}
+	.detail-pane.is-open { transform: translateX(0); visibility: visible; }
+
+	.pane-empty { display: none !important; }
+	.back-btn { display: block; }
+
+	.detail-inner { padding: 16px 14px 50px; }
+	.d-head { flex-wrap: wrap; gap: 12px; }
+	.d-bal { margin-left: 0; text-align: left; width: 100%; order: 3; }
+	.d-bal-num { font-size: 22px; }
+	.d-titles { flex: 1; }
+	#c-menu { margin-left: auto; }
+
+	.entry-row { gap: 8px; }
+	.inp-amount { width: 100px; }
+	.inp-note { min-width: 100%; order: 5; }
+	#c-save { flex: 1; }
+
 	.tab span { display: none; }
+	.tab.is-on span { display: inline; }
 	.who { display: none; }
-	.d-head { flex-wrap: wrap; }
-	.d-bal { margin-left: 0; text-align: left; }
+	.brand { margin-right: 10px; font-size: 15px; }
+	.topnav { padding: 0 12px; gap: 4px; }
+
+	/* Jadval tor ekranda siqilmasin */
+	.hist th:nth-child(3), .hist td:nth-child(3) { width: auto; font-size: 12px; }
+	.hist th:nth-child(2), .hist td:nth-child(2) { display: none; }
 }
