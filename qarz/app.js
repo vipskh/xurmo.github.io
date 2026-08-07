@@ -94,8 +94,18 @@ const sortContacts = (list) => {
 // shunda bo'sh joy va chiziqchalar xalaqit bermaydi.
 const digits = (s) => String(s).replace(/\D/g, '');
 
+// Ro'yxatda ko'rinadigan nom: ismga telefon raqamining oxirgi 4 raqami
+// qo'shiladi — "sardor0509". Bir xil ismli kontaktlarni ajratish uchun
+// (bitta daftarda 5 ta Sardor bo'lishi mumkin). Saqlangan ism o'zgarmaydi,
+// bu faqat ko'rinish; telefon tahrirlansa nom ham yangilanadi.
+const displayName = (c) => {
+	const d = digits(c.info || '');
+	return d.length >= 4 ? `${c.name}${d.slice(-4)}` : c.name;
+};
+
 const matches = (c, q) => {
 	if (!q) return true;
+	if (displayName(c).toLowerCase().includes(q)) return true;   // "sardor0509"
 	if (c.name.toLowerCase().includes(q)) return true;
 	if ((c.info || '').toLowerCase().includes(q)) return true;
 
@@ -121,7 +131,7 @@ const renderList = () => {
 				<span class="ava-dot${balance === 0 ? ' paid' : ''}"></span>
 			</div>
 			<div class="c-main">
-				<div class="c-nm">${esc(c.name)}</div>
+				<div class="c-nm">${esc(displayName(c))}</div>
 				<div class="c-time">${esc(c.info) || dt(lastAt(c)).slice(0, 10)}</div>
 			</div>
 			<div class="c-bal ${balance < 0 ? 'neg' : ''}">${money(balance)}</div>
