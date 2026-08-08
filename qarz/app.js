@@ -77,11 +77,12 @@ const show = (name) => {
 	if (name === 'reports') renderReports();
 	if (name === 'settings' && isOwner) renderMembers();
 
-	// Kassir faqat o'z ishini ko'radi — sarlavhada shu aytiladi
-	if (!isOwner) {
-		$('act-title').textContent = t('myActivity');
-		$('rep-title').textContent = t('myReports');
-	}
+	// Kassir faqat o'z ishini ko'radi — sarlavhada shu aytiladi.
+	// DIQQAT: ikkala holat ham yozilishi shart. Faqat kassir uchun
+	// qo'yilsa, keyin ega kirganda eski sarlavha qolib, u kassirdek
+	// ko'rinardi.
+	$('act-title').textContent = t(isOwner ? 'activity' : 'myActivity');
+	$('rep-title').textContent = t(isOwner ? 'reports' : 'myReports');
 };
 
 document.querySelectorAll('.tab').forEach((t) =>
@@ -517,7 +518,7 @@ const renderToday = () => {
 
 	// Qarzdan qutilganlar ro'yxati — ismlari bilan
 	$('closed-names').textContent = closedList.length
-		? closedList.map((r) => r.contact.name).join(', ')
+		? closedList.map((r) => displayName(r.contact)).join(', ')
 		: '';
 	$('closed-box').hidden = !closedList.length;
 
@@ -531,7 +532,7 @@ const renderToday = () => {
 			<div class="act-amt ${r.kind === 'debt' ? 'neg' : ''}">${r.kind === 'debt' ? '−' : '+'}${plain(r.amount)}</div>
 			<div class="act-main">
 				<div class="act-name">
-					${esc(r.contact.name)}
+					${esc(displayName(r.contact))}
 					${r.closed ? `<span class="badge-closed">${t('closedBadge')}</span>` : ''}
 				</div>
 				${r.note ? `<div class="act-note">${esc(r.note)}</div>` : ''}
