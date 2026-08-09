@@ -460,11 +460,16 @@ $('sortsheet').addEventListener('click', (e) => {
 let dayOffset = 0;          // 0 = bugun, 1 = kecha…
 let cashierFilter = '';     // bo'sh = hammasi
 
+// Kalendar kuni: yarim tundan yarim tungacha. Hisobotlardagi oraliqlar
+// ham shu qoidaga bo'ysunadi (rangeStart) — shunda "Bugun" ikkala
+// bo'limda bir xil ma'noni bildiradi.
 const dayBounds = (offset) => {
 	const d = new Date();
 	d.setHours(0, 0, 0, 0);
 	d.setDate(d.getDate() - offset);
-	return [d.getTime(), d.getTime() + 864e5];
+	const next = new Date(d);
+	next.setDate(next.getDate() + 1);        // yozgi vaqt o'tishida ham to'g'ri
+	return [d.getTime(), next.getTime()];
 };
 
 const renderToday = () => {
@@ -590,35 +595,67 @@ const fillCashiers = async () => {
 
 // ---------- Reports ----------
 
-const RANGE_MS = { today: 864e5, week: 6048e5, month: 2592e6, year: 31536e6 };
+const RANGE_DAYS = { today: 1, week: 7, month: 30, year: 365 };
 const RANGE_KEY = { all: 'allTime', today: 'today', week: 'week', month: 'month', year: 'year' };
 
-// Kassir hisobotda faqat o'z ishini ko'radi — boshqa kassirning
-// yig'gani unga ko'rinmaydi. Ega hammasini ko'radi.
+// Oraliq YARIM TUNDAN boshlanadi, "hozirdan 24 soat oldin" emas.
+// Aks holda "Bugun" hisobotda kechagi kechqurunni ham qo'shib yuborardi
+// va Kunlik faoliyat bilan raqamlar mos kelmasdi.
+const rangeStart = (r) => {
+	if (r === 'all') return 0;
+	const d = new Date();
+	d.setHours(0, 0, 0, 0);
+	d.setDate(d.getDate() - (RANGE_DAYS[r] - 1));
+	return d.getTime();
+};
+
+// --- 1-guruh: HOZIRGI holat (sana oralig'iga bog'liq emas) ---
+//
+// Balanslar yig'indisi: kim menga qarzdor, men kimga qarzdorman.
+// Bu "hozir qancha pul ko'chada" degan savolga javob — hisobotning
+// eng muhim raqami.
+const outstanding = () => {
+	let owed = 0, owe = 0, debtors = 0;
+	for (const c of db.contacts) {
+		const { balance } = sums(c);
+		if (balance < 0) { owed += -balance; debtors++; }
+		else if (balance > 0) owe += balance;
+	}
+	return { owed, owe, debtors };
+};
+
+// --- 2-guruh: oraliqdagi HARAKAT ---
+//
+// Kassir faqat o'z ishini ko'radi — boshqa kassirning yig'gani unga
+// ko'rinmaydi. Ega hammasini ko'radi.
 const totals = (r) => {
-	let debt = 0, loan = 0;
+	const from = rangeStart(r);
+	let debt = 0, loan = 0, count = 0;
 	for (const c of db.contacts) {
 		for (const e of c.entries) {
-			if (r !== 'all' && e.at < Date.now() - RANGE_MS[r]) continue;
+			if (e.at < from) continue;
 			if (!isOwner && e.by !== user.$id) continue;
 			e.kind === 'debt' ? (debt += e.amount) : (loan += e.amount);
+			count++;
 		}
 	}
-	return { debt, loan };
+	return { debt, loan, count };
 };
 
 const renderReports = () => {
-	const a = totals(ranges.a);
-	$('r-total-debts').textContent = a.debt ? `−${plain(a.debt)}` : `0 ${db.cur}`;
-	$('r-total-loans').textContent = a.loan ? `+${plain(a.loan)}` : `0 ${db.cur}`;
-	$('r-range-a').textContent = t(RANGE_KEY[ranges.a]);
+	const o = outstanding();
+	$('r-total-debts').textContent = o.owed ? `−${plain(o.owed)}` : `0 ${db.cur}`;
+	$('r-total-loans').textContent = o.owe ? `+${plain(o.owe)}` : `0 ${db.cur}`;
+	$('r-debtors').textContent = o.debtors;
 
 	const b = totals(ranges.b);
 	$('r-taken').textContent = b.debt ? `−${plain(b.debt)}` : `0 ${db.cur}`;
 	$('r-given').textContent = b.loan ? `+${plain(b.loan)}` : `0 ${db.cur}`;
+	$('r-ops').textContent = b.count;
+
 	const diff = b.loan - b.debt;
 	$('r-diff').textContent = money(diff);
-	$('r-diff').className = `rep-val ${diff < 0 ? 'neg' : ''}`;
+	$('r-diff').className = `rep-val ${diff < 0 ? 'neg' : diff > 0 ? 'zero' : ''}`;
 	$('r-range-b').textContent = t(RANGE_KEY[ranges.b]);
 };
 

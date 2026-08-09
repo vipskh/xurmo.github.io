@@ -187,37 +187,43 @@
 	<div class="narrow">
 		<div class="sec-head"><h1 class="sec-title" id="rep-title" data-t="reports">Hisobotlar</h1></div>
 
+		<div class="sec-sub" data-t="rightNow">Hozirgi holat</div>
 		<div class="rep-group">
 			<div class="rep-row">
-				<svg class="rep-ico" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 11h20M4 4l16 16"/></svg>
-				<div><div class="rep-label" data-t="totalDebts">Umumiy qarz</div><div class="rep-val neg" id="r-total-debts">0</div></div>
+				<svg class="rep-ico" viewBox="0 0 24 24"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+				<div><div class="rep-label" data-t="totalDebts">Olishim kerak</div><div class="rep-val neg" id="r-total-debts">0</div></div>
 			</div>
 			<div class="rep-row">
-				<svg class="rep-ico" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 11h20"/></svg>
-				<div><div class="rep-label" data-t="totalLoans">Umumiy to‘lov</div><div class="rep-val" id="r-total-loans">0</div></div>
+				<svg class="rep-ico" viewBox="0 0 24 24"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6M4 4l16 16"/></svg>
+				<div><div class="rep-label" data-t="totalLoans">Berishim kerak</div><div class="rep-val" id="r-total-loans">0</div></div>
 			</div>
-			<div class="rep-row" data-range="a">
-				<svg class="rep-ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
-				<div><div class="rep-label" data-t="dateRange">Sana oralig‘i</div><div class="rep-val sm" id="r-range-a">Butun vaqt</div></div>
+			<div class="rep-row">
+				<svg class="rep-ico" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6M17 11v6M14 14h6"/></svg>
+				<div><div class="rep-label" data-t="debtorCount">Qarzdorlar</div><div class="rep-val" id="r-debtors">0</div></div>
 			</div>
 		</div>
 
+		<div class="sec-sub" data-t="periodActivity">Tanlangan davrdagi harakat</div>
 		<div class="rep-group">
+			<div class="rep-row" data-range="b">
+				<svg class="rep-ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+				<div><div class="rep-label" data-t="dateRange">Sana oralig‘i</div><div class="rep-val sm" id="r-range-b">Butun vaqt</div></div>
+			</div>
 			<div class="rep-row">
 				<svg class="rep-ico" viewBox="0 0 24 24"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6M4 4l16 16"/></svg>
-				<div><div class="rep-label" data-t="takenDebts">Olingan qarz</div><div class="rep-val neg" id="r-taken">0</div></div>
+				<div><div class="rep-label" data-t="takenDebts">Qarz berildi</div><div class="rep-val neg" id="r-taken">0</div></div>
 			</div>
 			<div class="rep-row">
 				<svg class="rep-ico" viewBox="0 0 24 24"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-				<div><div class="rep-label" data-t="givenLoans">Berilgan to‘lov</div><div class="rep-val" id="r-given">0</div></div>
+				<div><div class="rep-label" data-t="givenLoans">To‘lov olindi</div><div class="rep-val" id="r-given">0</div></div>
 			</div>
 			<div class="rep-row">
 				<svg class="rep-ico" viewBox="0 0 24 24"><path d="M2 13l4 4L14 8M10 15l3 3 9-10"/></svg>
 				<div><div class="rep-label" data-t="differences">Farq</div><div class="rep-val" id="r-diff">0</div></div>
 			</div>
-			<div class="rep-row" data-range="b">
-				<svg class="rep-ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
-				<div><div class="rep-label" data-t="dateRange">Sana oralig‘i</div><div class="rep-val sm" id="r-range-b">Butun vaqt</div></div>
+			<div class="rep-row">
+				<svg class="rep-ico" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+				<div><div class="rep-label" data-t="dayCount">Amallar</div><div class="rep-val" id="r-ops">0</div></div>
 			</div>
 		</div>
 	</div>

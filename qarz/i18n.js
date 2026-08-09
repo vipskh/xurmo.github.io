@@ -56,9 +56,11 @@ const DICT = {
 		byName: 'Ism bo‘yicha (A→Z)', byDebt: 'Eng ko‘p qarzdor', byLoan: 'Eng ko‘p bergan',
 
 		// Hisobotlar
-		totalDebts: 'Umumiy qarz', totalLoans: 'Umumiy to‘lov',
-		dateRange: 'Sana oralig‘i', takenDebts: 'Olingan qarz',
-		givenLoans: 'Berilgan to‘lov', differences: 'Farq',
+		totalDebts: 'Olishim kerak', totalLoans: 'Berishim kerak',
+		rightNow: 'Hozirgi holat', periodActivity: 'Tanlangan davrdagi harakat',
+		debtorCount: 'Qarzdorlar',
+		dateRange: 'Sana oralig‘i', takenDebts: 'Qarz berildi',
+		givenLoans: 'To‘lov olindi', differences: 'Farq',
 		allTime: 'Butun vaqt', today: 'Bugun', week: 'Oxirgi 7 kun',
 		month: 'Oxirgi 30 kun', year: 'Oxirgi 1 yil',
 
@@ -142,9 +144,11 @@ const DICT = {
 		sort: 'Сортировка', byRecent: 'По последней операции',
 		byName: 'По имени (А→Я)', byDebt: 'Самый большой долг', byLoan: 'Больше всех оплатил',
 
-		totalDebts: 'Всего долгов', totalLoans: 'Всего оплат',
-		dateRange: 'Период', takenDebts: 'Взято в долг',
-		givenLoans: 'Оплачено', differences: 'Разница',
+		totalDebts: 'Мне должны', totalLoans: 'Я должен',
+		rightNow: 'Текущее состояние', periodActivity: 'Операции за период',
+		debtorCount: 'Должников',
+		dateRange: 'Период', takenDebts: 'Выдано в долг',
+		givenLoans: 'Получено оплат', differences: 'Разница',
 		allTime: 'Всё время', today: 'Сегодня', week: 'Последние 7 дней',
 		month: 'Последние 30 дней', year: 'Последний год',
 
@@ -224,9 +228,11 @@ const DICT = {
 		sort: 'Sort', byRecent: 'By last activity',
 		byName: 'By name (A→Z)', byDebt: 'Largest debt', byLoan: 'Paid the most',
 
-		totalDebts: 'Total Debts', totalLoans: 'Total Loans',
-		dateRange: 'Date Range', takenDebts: 'Taken Debts',
-		givenLoans: 'Given Loans', differences: 'Differences',
+		totalDebts: 'Owed to me', totalLoans: 'I owe',
+		rightNow: 'Right now', periodActivity: 'Activity in period',
+		debtorCount: 'Debtors',
+		dateRange: 'Date Range', takenDebts: 'Debt given',
+		givenLoans: 'Payments received', differences: 'Difference',
 		allTime: 'All Time', today: 'Today', week: 'Last 7 days',
 		month: 'Last 30 days', year: 'Last year',
 
