@@ -645,8 +645,14 @@ const totals = (r) => {
 const renderReports = () => {
 	const o = outstanding();
 	$('r-total-debts').textContent = o.owed ? `−${plain(o.owed)}` : `0 ${db.cur}`;
-	$('r-total-loans').textContent = o.owe ? `+${plain(o.owe)}` : `0 ${db.cur}`;
 	$('r-debtors').textContent = o.debtors;
+
+	// "Berishim kerak" faqat kerak bo'lganda ko'rinadi: yetkazib
+	// beruvchiga qarz yoki mijozning ortiqcha to'lovi bo'lsa. Faqat
+	// mijoz qarzlarini yuritadigan do'konda bu qator doim 0 bo'lib,
+	// bekorga joy egallardi.
+	$('row-owe').hidden = !o.owe;
+	$('r-total-loans').textContent = o.owe ? `+${plain(o.owe)}` : `0 ${db.cur}`;
 
 	const b = totals(ranges.b);
 	$('r-taken').textContent = b.debt ? `−${plain(b.debt)}` : `0 ${db.cur}`;
