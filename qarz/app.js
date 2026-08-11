@@ -359,9 +359,9 @@ $('c-menu').addEventListener('click', () => openSheet('ctxsheet'));
 
 $('ctx-edit').addEventListener('click', async () => {
 	const c = byId(openId);
-	const name = prompt(`${t('name')}:`, c.name);
+	const name = await ask(t('name'), c.name);
 	if (name === null) return;
-	const info = prompt(`${t('information')}:`, c.info || '');
+	const info = await ask(t('information'), c.info || '');
 	if (info === null) return;
 
 	// Tahrirlashda ham boshqa kontakt bilan to'qnashmasin
@@ -827,7 +827,7 @@ $('member-list').addEventListener('click', async (e) => {
 	}
 
 	if (pw) {
-		const p = prompt(t('newPasswordPrompt'));
+		const p = await ask(t('newPasswordPrompt'));
 		if (!p) return;
 		try { await store.setCashierPassword(pw.dataset.pw, p); alert(t('passwordChanged')); }
 		catch (ex) { alert(ex.message); }
@@ -902,6 +902,50 @@ document.querySelectorAll('.sheet').forEach((s) =>
 	s.addEventListener('click', (e) => { if (e.target === s) closeSheets(); }));
 document.querySelectorAll('[data-sheet-close]').forEach((b) => b.addEventListener('click', closeSheets));
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheets(); });
+
+// ---------- Bitta savol ----------
+//
+// window.prompt() O'RNIGA. Electron (kompyuter ilovasi) prompt'ni
+// umuman qo'llab-quvvatlamaydi — "prompt() is not supported" deb xato
+// beradi va tugma umuman ishlamay qoladi. Brauzerda ishlarkan deb
+// qoldirib bo'lmaydi, chunki ikkalasi bitta kod.
+//
+// Javob: matn, yoki bekor qilinsa null.
+
+let askResolve = null;
+
+const ask = (title, value = '') => {
+	closeSheets();
+	$('ask-title').textContent = title;
+	$('ask-input').value = value;
+	openSheet('asksheet');
+	$('ask-input').focus();
+	$('ask-input').select();
+
+	return new Promise((resolve) => {
+		askResolve = resolve;
+	});
+};
+
+// Oyna yopilishining HAR QANDAY yo'li javobni tugatishi shart, aks
+// holda `await ask(...)` abadiy osilib qolardi.
+const askDone = (value) => {
+	const r = askResolve;
+	askResolve = null;
+	r?.(value);
+};
+
+$('ask-form').addEventListener('submit', (e) => {
+	e.preventDefault();
+	const v = $('ask-input').value;
+	closeSheets();
+	askDone(v);
+});
+
+// Bekor qilish, tashqariga bosish, Escape — hammasi shu yerdan o'tadi
+new MutationObserver(() => {
+	if ($('asksheet').hidden && askResolve) askDone(null);
+}).observe($('asksheet'), { attributes: true, attributeFilter: ['hidden'] });
 
 // ---------- Kirish ----------
 

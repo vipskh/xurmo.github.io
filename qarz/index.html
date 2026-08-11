@@ -285,6 +285,22 @@
 	</div>
 </section>
 
+<!-- ══════════ Bitta savol (prompt o'rniga) ══════════
+     Kompyuter ilovasida (Electron) window.prompt() umuman ishlamaydi —
+     xato beradi va tugma bosilmaydi. Shuning uchun o'z oynamiz. -->
+<div class="sheet" id="asksheet" hidden>
+	<div class="sheet-card">
+		<div class="sheet-title" id="ask-title">—</div>
+		<div class="sheet-body">
+			<form id="ask-form">
+				<div class="f-group"><input class="inp" id="ask-input" style="width:100%" autocomplete="off"></div>
+				<button class="btn-dark btn-block" id="ask-ok" type="submit" data-t="save">Saqlash</button>
+			</form>
+		</div>
+		<button class="sheet-close" data-sheet-close data-t="cancel">Bekor qilish</button>
+	</div>
+</div>
+
 <!-- ══════════ Yangi kontakt ══════════ -->
 <div class="sheet" id="newsheet" hidden>
 	<div class="sheet-card">
