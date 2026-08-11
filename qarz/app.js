@@ -768,6 +768,12 @@ const signOut = async () => {
 	$('pane-empty').hidden = false;
 	$('detail-pane').classList.remove('is-open');
 
+	// Kirish shakli "Ro'yxatdan o'tish" holatida qolib ketmasin —
+	// chiqqan odam qaytadan kirmoqchi, yangi hisob ochmoqchi emas
+	signupMode = false;
+	syncLoginText();
+	$('login-err').hidden = true;
+
 	show('login');
 	$('l-pass').value = '';
 	$('l-email').focus();
@@ -1098,6 +1104,11 @@ const syncModeText = () => {
 
 	// Kassirga tegishli bo'lmagan bo'limlar yashiriladi
 	$('owner-only').hidden = !isOwner;
+
+	// Kontakt amallari (tahrirlash, hisobni yopish, o'chirish) — faqat
+	// egada. Kassirning ishi qarz va to'lov yozish, kontaktni o'zgartirish
+	// yoki yo'q qilish emas. Ma'lumot qatlamida ham to'silgan.
+	$('c-menu').hidden = !isOwner;
 	$('foot-note').textContent = t('dataNote');
 };
 

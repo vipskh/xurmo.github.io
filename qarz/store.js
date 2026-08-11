@@ -231,10 +231,16 @@ export const addContact = async (_userId, { name, info }) => {
 	return { id: row.$id, name: row.name, info: row.info || '', createdAt: Date.parse(row.$createdAt), entries: [] };
 };
 
-export const updateContact = (id, { name, info }) =>
-	request('PATCH', `${base}/${CFG.contacts}/rows/${id}`, { data: { name, info: info || '' } });
+// Tahrirlash va o'chirish — FAQAT EGA. Serverda ham shunday: qator
+// ruxsatlari `update`/`delete` ni team owner'ga bog'lagan. Bu yerdagi
+// tekshiruv shunchaki tushunarli xabar berish uchun.
+export const updateContact = (id, { name, info }) => {
+	if (!isOwner) throw new Error('faqat ega tahrirlaydi');
+	return request('PATCH', `${base}/${CFG.contacts}/rows/${id}`, { data: { name, info: info || '' } });
+};
 
 export const deleteContact = async (id, entries) => {
+	if (!isOwner) throw new Error('faqat ega o‘chiradi');
 	// Yozuvlar o'chirilmaydi (ruxsat yo'q) — ular tarix sifatida qoladi,
 	// lekin kontaktsiz bo'lgani uchun hech qayerda ko'rinmaydi.
 	await request('DELETE', `${base}/${CFG.contacts}/rows/${id}`);
