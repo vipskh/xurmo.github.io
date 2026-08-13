@@ -752,6 +752,25 @@ $('set-import').addEventListener('click', () => {
 			if (!Array.isArray(data.contacts)) throw new Error('format');
 			if (!confirm(`${data.contacts.length} ${t('restoreConfirm')}`)) return;
 
+			// BIRLASHTIRISH: mavjud qarzdor takrorlanmaydi, yozuvning asl
+			// sanasi va kim yozgani saqlanadi, ikki marta bosilsa ham
+			// natija bir xil. Eski usul (har birini yangidan yaratish)
+			// zaxirani tiklaganda "sardor0509" ni ikkitaga bo'lib
+			// yuborardi — shuning uchun mumkin bo'lsa shu ishlatiladi.
+			if (store.mergeAll) {
+				const r = await store.mergeAll(data);
+				db.contacts = await store.fetchAll();
+				openId = null;
+				$('detail-inner').hidden = true;
+				$('pane-empty').hidden = false;
+				refreshAll();
+				alert(`${t('restored')}\n\n` +
+					`${t('mergeNewContacts')}: ${r.kontaktYangi}\n` +
+					`${t('mergeNewEntries')}: ${r.yozuvYangi}\n` +
+					`${t('mergeSkipped')}: ${r.yozuvTakror}`);
+				return;
+			}
+
 			for (const c of data.contacts) {
 				const fresh = await store.addContact(user.$id, { name: c.name, info: c.info });
 				for (const e of c.entries || []) {
@@ -793,6 +812,7 @@ const signOut = async () => {
 	// chiqqan odam qaytadan kirmoqchi, yangi hisob ochmoqchi emas
 	signupMode = false;
 	syncLoginText();
+	syncRegisterVisible();
 	$('login-err').hidden = true;
 
 	show('login');
@@ -986,6 +1006,22 @@ const syncLoginText = () => {
 	$('l-pass').autocomplete = signupMode ? 'new-password' : 'current-password';
 };
 
+// Kompyuter ilovasida daftar BITTA. Ega bir marta ochiladi, keyin
+// "Ro'yxatdan o'tish" havolasi yashiriladi.
+//
+// Ilgari u doim ko'rinardi va har bosilganda YANGI EGA yaratardi:
+// kassir chiqib, o'ziga ega hisobi ochib, kassirlarni o'chirib,
+// kontaktlarni yo'q qilib yuborishi mumkin edi. Ega esa "yangi hisob
+// ochdim, lekin eski qarzlar chiqyapti" deb hayron bo'lardi — chunki
+// hisob yangi, daftar esa o'sha.
+const syncRegisterVisible = async () => {
+	let mumkin = true;
+	try { mumkin = (await store.canRegister?.()) ?? true; } catch { /* eski store */ }
+
+	$('l-switch').hidden = !mumkin;
+	if (!mumkin && signupMode) { signupMode = false; syncLoginText(); }
+};
+
 $('l-switch').addEventListener('click', () => {
 	signupMode = !signupMode;
 	syncLoginText();
@@ -1169,7 +1205,7 @@ const start = async () => {
 	history.pushState(null, '', location.href);
 
 	const session = await store.init().catch(() => null);
-	if (!session) { show('login'); return; }
+	if (!session) { await syncRegisterVisible(); show('login'); return; }
 
 	user = session.me;
 	isOwner = session.isOwner;

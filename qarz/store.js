@@ -135,6 +135,11 @@ export const logout = () => {
 	return request('DELETE', `${CFG.endpoint}/account/sessions/current`);
 };
 
+// Saytda har bir yangi hisob o'z do'konini (jamoasini) ochadi, shuning
+// uchun ro'yxatdan o'tish doim ochiq. Kompyuter ilovasida esa daftar
+// bitta — u yerdagi store bu funksiyani boshqacha javob beradi.
+export const canRegister = async () => true;
+
 export const register = async (email, password, name) => {
 	await request('POST', `${CFG.endpoint}/account`, { userId: 'unique()', email, password, name });
 	return login(email, password);

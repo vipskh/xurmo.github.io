@@ -70,7 +70,8 @@ const DICT = {
 		account: 'Hisob', logout: 'Chiqish',
 		dataNote: 'Ma‘lumot serverda saqlanadi — istalgan qurilmadan kirsangiz o‘sha yerda turadi.',
 		restoreConfirm: 'ta kontakt qo‘shiladi. Mavjudlari o‘chmaydi.',
-		restored: 'Tiklandi.', fileFail: 'Fayl o‘qilmadi',
+		restored: 'Tiklandi.',
+		mergeNewContacts: 'Yangi qarzdor', mergeNewEntries: 'Yangi yozuv', mergeSkipped: 'Takror (tashlandi)', fileFail: 'Fayl o‘qilmadi',
 
 		// Eslatmalar
 		newNote: '+ Yangi eslatma', noNotes: 'Eslatma yo‘q.', notePrompt: 'Eslatma:',
@@ -101,6 +102,9 @@ const DICT = {
 		dupAsk: 'Baribir yangi kontakt qo‘shilsinmi?',
 		dupOpened: 'Bu odam allaqachon bor — yozuv shunga qo‘shiladi:',
 		needSignIn: 'Qaytadan kirish kerak — pastdagi tugmani bosing',
+		externalBackup: 'Tashqi zaxira papkasi',
+		tashqiYoqilgan: 'Yoqilgan',
+		tashqiYoqilmagan: 'Yoqilmagan',
 	},
 
 	ru: {
@@ -157,7 +161,8 @@ const DICT = {
 		account: 'Аккаунт', logout: 'Выйти',
 		dataNote: 'Данные хранятся на сервере — доступны с любого устройства.',
 		restoreConfirm: 'контактов будет добавлено. Существующие не удалятся.',
-		restored: 'Восстановлено.', fileFail: 'Файл не прочитан',
+		restored: 'Восстановлено.',
+		mergeNewContacts: 'Новых должников', mergeNewEntries: 'Новых записей', mergeSkipped: 'Повторы (пропущено)', fileFail: 'Файл не прочитан',
 
 		newNote: '+ Новая заметка', noNotes: 'Заметок нет.', notePrompt: 'Заметка:',
 
@@ -185,6 +190,9 @@ const DICT = {
 		dupAsk: 'Всё равно добавить нового?',
 		dupOpened: 'Этот человек уже есть — запись добавится ему:',
 		needSignIn: 'Нужно войти заново — нажмите кнопку ниже',
+		externalBackup: 'Внешняя папка резервной копии',
+		tashqiYoqilgan: 'Включена',
+		tashqiYoqilmagan: 'Выключена',
 	},
 
 	en: {
@@ -241,7 +249,8 @@ const DICT = {
 		account: 'Account', logout: 'Sign out',
 		dataNote: 'Data is stored on the server — available from any device.',
 		restoreConfirm: 'contacts will be added. Existing ones stay.',
-		restored: 'Restored.', fileFail: 'Could not read file',
+		restored: 'Restored.',
+		mergeNewContacts: 'New debtors', mergeNewEntries: 'New entries', mergeSkipped: 'Duplicates (skipped)', fileFail: 'Could not read file',
 
 		newNote: '+ New note', noNotes: 'No notes.', notePrompt: 'Note:',
 
@@ -269,6 +278,9 @@ const DICT = {
 		dupAsk: 'Add a new one anyway?',
 		dupOpened: 'This person already exists — the entry goes here:',
 		needSignIn: 'Please sign in again — use the button below',
+		externalBackup: 'External backup folder',
+		tashqiYoqilgan: 'On',
+		tashqiYoqilmagan: 'Off',
 	},
 };
 
