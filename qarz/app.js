@@ -36,6 +36,22 @@ const sums = (c) => {
 const lastAt = (c) => c.entries.length ? Math.max(...c.entries.map((e) => e.at)) : c.createdAt;
 const byId = (id) => db.contacts.find((x) => x.id === id);
 
+// Ma'lumot o'zgarganda UCHALA ekran ham qayta chiziladi.
+//
+// Ilgari faqat Qarzlar ro'yxati yangilanardi. Natijada to'lov qabul
+// qilingandan keyin Hisobotlar va Eslatmalar eski raqamni ko'rsatib
+// turardi: Qarzlarda 1 100, Hisobotlarda 1 200 — bir xil ma'lumotdan
+// ikki xil son. Pul yuritadigan dasturda bunga yo'l qo'yib bo'lmaydi,
+// shuning uchun hamma joyda shu bitta funksiya chaqiriladi.
+//
+// (Funksiyalarning o'zi pastda e'lon qilingan — bu faqat chaqiruvchi,
+//  shuning uchun tartib muhim emas.)
+const refreshAll = () => {
+	renderList();
+	renderToday();
+	renderReports();
+};
+
 // ---------- Format ----------
 // Summalar bazada TIYIN/SENTDA (butun son) — kasrli son bilan qo'shishda
 // xato bo'lmasin (0.1 + 0.2 !== 0.3).
@@ -248,6 +264,7 @@ $('c-save').addEventListener('click', async () => {
 	$('c-note').value = '';
 	$('c-amount').focus();
 	openContact(openId);
+	refreshAll();
 
 	// 2. Serverga fonda yuboramiz
 	try {
@@ -258,6 +275,7 @@ $('c-save').addEventListener('click', async () => {
 		alert(`${t('saveFail')}: ${e.message}`);
 	}
 	if (openId === c.id) openContact(c.id);
+	refreshAll();
 });
 
 const enterSaves = (id) => $(id).addEventListener('keydown', (e) => {
@@ -343,6 +361,7 @@ $('n-save').addEventListener('click', async () => {
 		db.contacts.push(c);
 		closeSheets();
 		openContact(c.id);
+		refreshAll();
 	} catch (e) {
 		alert(`${t('saveFail')}: ${e.message}`);
 	} finally {
@@ -402,6 +421,7 @@ $('ctx-clear').addEventListener('click', async () => {
 	};
 	c.entries.push(temp);
 	openContact(c.id);
+	refreshAll();
 
 	try {
 		Object.assign(temp, await store.addEntry(user.$id, c.id, data), { pending: false });
@@ -410,6 +430,7 @@ $('ctx-clear').addEventListener('click', async () => {
 		alert(`${t('saveFail')}: ${e.message}`);
 	}
 	openContact(c.id);
+	refreshAll();
 });
 
 $('ctx-del').addEventListener('click', async () => {
@@ -422,13 +443,13 @@ $('ctx-del').addEventListener('click', async () => {
 	openId = null;
 	$('detail-inner').hidden = true;
 	$('pane-empty').hidden = false;
-	renderList();
+	refreshAll();
 
 	try {
 		await store.deleteContact(c.id, c.entries);
 	} catch (e) {
 		db.contacts.push(backup);
-		renderList();
+		refreshAll();
 		alert(`${t('deleteFail')}: ${e.message}`);
 	}
 });
@@ -738,7 +759,7 @@ $('set-import').addEventListener('click', () => {
 				}
 				db.contacts.push(fresh);
 			}
-			renderList();
+			refreshAll();
 			alert(t('restored'));
 		} catch (e) {
 			alert(`${t('fileFail')}: ${e.message}`);
@@ -1138,8 +1159,7 @@ const load = async () => {
 		const c = byId(contactId);
 		if (!c || c.entries.some((e) => e.id === entry.id)) return;
 		c.entries.push(entry);
-		renderList();
-		renderToday();
+		refreshAll();
 		if (openId === contactId) openContact(contactId);
 	});
 };

@@ -19,7 +19,20 @@
 	--radius: 8px;
 }
 
-* { box-sizing: border-box; }
+/* Android WebView (telefon ilovasi) bosilganda ko'k to'rtburchak
+   chizadi — brauzerning standart "tegilgan joy" belgisi. Kompyuterda
+   sezilmaydi, lekin telefonda tugma "bosilmayapti"dek ko'rinardi.
+   Shu bilan birga uzoq bosganda matn tanlanib qolishining oldi ham
+   olinadi (tugmalarda tanlanadigan matn bo'lishining hojati yo'q). */
+* {
+	box-sizing: border-box;
+	-webkit-tap-highlight-color: transparent;
+}
+button, .as-btn, .link-btn, .tab, .ico, .sheet-item, .btn-dark, a {
+	touch-action: manipulation;
+	-webkit-user-select: none;
+	user-select: none;
+}
 
 /* `hidden` atributi har doim ustun turishi kerak. Brauzerning o'z
    qoidasi ([hidden]{display:none}) klass qoidasidan kuchsiz — masalan
