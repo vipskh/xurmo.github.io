@@ -190,6 +190,7 @@ const openContact = (id) => {
 
 	$('pane-empty').hidden = true;
 	$('detail-inner').hidden = false;
+	$('c-hint').hidden = true;                   // takrorlanish xabari — bir martalik
 	$('detail-pane').classList.add('is-open');   // telefonda o'ngdan chiqadi
 
 	$('c-name').textContent = c.name;
@@ -270,26 +271,39 @@ enterSaves('c-note');
 document.querySelector('[data-new-contact]').addEventListener('click', () => {
 	['n-name', 'n-info', 'n-amount', 'n-note'].forEach((id) => ($(id).value = ''));
 	$('n-err').hidden = true;
-	$('n-open-dup').hidden = true;
 	setSeg('n-seg', 'debt');
 	openSheet('newsheet');
 	$('n-name').focus();
 });
 
-// Takrorlanish topilganda — mavjud kontaktni ochish
-$('n-open-dup').addEventListener('click', () => {
-	const id = $('n-open-dup').dataset.id;
+// Takrorlanish topilganda: yangi kontakt ochmaymiz, o'sha odamning
+// ekraniga o'tamiz va kiritilgan summani tayyor qo'yamiz. Kassir bir
+// marta "Saqlash" bosadi — yozuv mavjud kontaktga tushadi.
+//
+// Summa avtomatik yozilmaydi, ataylab: ism yoki raqam xato terilgan
+// bo'lsa pul begona odamga yozilib qolardi, o'chirib bo'lmasdi.
+const goExisting = (c) => {
+	const kind = segKind('n-seg');
+	const amount = $('n-amount').value;
+	const note = $('n-note').value;
+
 	closeSheets();
 	show('debts');
-	openContact(id);
-});
+	openContact(c.id);
+
+	setSeg('c-seg', kind);
+	$('c-amount').value = amount;
+	$('c-note').value = note;
+
+	$('c-hint').textContent = `${t('dupOpened')} ${displayName(c)}`;
+	$('c-hint').hidden = false;
+	$('c-amount').focus();
+	$('c-amount').select();
+};
 
 // Ma'lumot o'zgartirilsa ogohlantirish yo'qoladi
 for (const id of ['n-name', 'n-info']) {
-	$(id).addEventListener('input', () => {
-		$('n-err').hidden = true;
-		$('n-open-dup').hidden = true;
-	});
+	$(id).addEventListener('input', () => { $('n-err').hidden = true; });
 }
 
 $('n-save').addEventListener('click', async () => {
@@ -306,11 +320,9 @@ $('n-save').addEventListener('click', async () => {
 	const dup = findDuplicate({ name, info });
 	if (dup) {
 		if (dup.reason === 'phone') {
-			// Telefon aynan mos — bu o'sha odam. Qo'shmaymiz.
-			nErr.textContent = `${t('dupPhone')}: ${dup.contact.name}`;
-			nErr.hidden = false;
-			$('n-open-dup').hidden = false;
-			$('n-open-dup').dataset.id = dup.contact.id;
+			// Telefon aynan mos — bu o'sha odam. Yangisini ochmaymiz,
+			// to'g'ridan-to'g'ri uning ekraniga o'tamiz.
+			goExisting(dup.contact);
 			return;
 		}
 		// Ism bir xil, telefon boshqa — haqiqatan boshqa odam bo'lishi mumkin

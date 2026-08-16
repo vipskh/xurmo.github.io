@@ -99,7 +99,7 @@ const DICT = {
 		dupPhone: 'Bu telefon raqami allaqachon bor',
 		dupName: 'Bu ismda kontakt bor',
 		dupAsk: 'Baribir yangi kontakt qo‘shilsinmi?',
-		openExisting: 'Mavjud kontaktni ochish',
+		dupOpened: 'Bu odam allaqachon bor — yozuv shunga qo‘shiladi:',
 		needSignIn: 'Qaytadan kirish kerak — pastdagi tugmani bosing',
 	},
 
@@ -183,7 +183,7 @@ const DICT = {
 		dupPhone: 'Этот номер уже есть',
 		dupName: 'Контакт с таким именем уже есть',
 		dupAsk: 'Всё равно добавить нового?',
-		openExisting: 'Открыть существующий контакт',
+		dupOpened: 'Этот человек уже есть — запись добавится ему:',
 		needSignIn: 'Нужно войти заново — нажмите кнопку ниже',
 	},
 
@@ -267,7 +267,7 @@ const DICT = {
 		dupPhone: 'This phone number already exists',
 		dupName: 'A contact with this name exists',
 		dupAsk: 'Add a new one anyway?',
-		openExisting: 'Open existing contact',
+		dupOpened: 'This person already exists — the entry goes here:',
 		needSignIn: 'Please sign in again — use the button below',
 	},
 };
