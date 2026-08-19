@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="uz">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Xurmo</title>
+    <script>
+      // Mini App (/app/…) — bitta sahifali ilova: navigatsiya klient tomonda
+      // ketadi va server bu yo'llarni bilmaydi. GitHub Pages esa faqat ILDIZDAGI
+      // 404.html ni ishlatadi (/app/404.html e'tiborga olinmaydi — sinab
+      // ko'rilgan), shuning uchun qaytarish shu yerdan qilinadi.
+      //
+      // Yo'lni sessionStorage'ga qo'yamiz va /app/ ga o'tamiz; ilova ko'tarilgach
+      // o'sha yo'lga o'zi qaytadi. Shunda xarita ekranida sahifa yangilansa ham
+      // foydalanuvchi joyida qoladi.
+      (function () {
+        var p = location.pathname;
+        if (p.indexOf("/app/") === 0) {
+          try {
+            sessionStorage.setItem("xurmo.redirect", p + location.search + location.hash);
+          } catch (e) {}
+          location.replace("/app/");
+        }
+      })();
+    </script>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: system-ui, -apple-system, sans-serif;
+        color: #1f2430;
+        background: #fff;
+        text-align: center;
+        padding: 24px;
+      }
+      a {
+        color: #d66a43;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <h1 style="font-size: 20px; margin: 0 0 8px">Sahifa topilmadi</h1>
+      <p style="margin: 0; color: #667085">
+        <a href="/">Bosh sahifaga qaytish</a>
+      </p>
+    </div>
+  </body>
+</html>
