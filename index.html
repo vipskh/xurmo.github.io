@@ -42,41 +42,36 @@
         flex: 1;
       }
 
-      /* KOMPYUTER ko'rinishi.
-         Ilovaning har bir ekrani telefon kengligiga mo'ljallab
-         chizilgan (dubizzle o'lchamlari bo'yicha). Keng monitorda uni
-         butun ekranga cho'zish har bir ekranni qaytadan chizishni
-         talab qilardi; buning o'rniga — Telegram Web va ko'p
-         mobil-birinchi ilovalar qiladigan yo'l: ilova markazda,
-         telefon kengligidagi ustunda turadi.
+      /* PLANSHET/KOMPYUTER ko'rinishi.
+         ESKI YONDASHUV (endi olib tashlandi): butun ilovani telefon
+         kengligidagi ustunga o'rab, katta monitorda "suzib turgan
+         telefon" ko'rinishida ko'rsatish (Telegram Web uslubi). Bu
+         haqiqiy desktop tajriba emas edi — foydalanuvchi buni
+         tanimadi ("men computerda telefon ekranini ko'rishni
+         hohlamayman").
 
-         900px — planshetning bo'yiga qo'yilgani hali telefon
-         ko'rinishida qolsin degan chegara. */
-      @media (min-width: 900px) {
+         YANGI: #root ENDI TO'LIQ KENGLIKDA — chunki ichida endi
+         doimiy tepa navbar bor (components/DesktopNavBar.tsx, faqat
+         web'da va >=768px'da ko'rinadi) va u chekka-chekkagacha
+         cho'zilishi kerak. Har bir tab-ekranning O'ZI (768px'dan keng
+         ekranda) markazlashgan "kontent qutisi" ichida turadi —
+         buni endi shu yerda emas, app/(root)/(tabs)/_layout.tsx'dagi
+         `sceneContainerStyle` boshqaradi (navbar tagida, ekran
+         darajasida) — shuning uchun bu yerda #root uchun boshqa
+         maxWidth/margin qolmadi. */
+      @media (min-width: 768px) {
         body {
           background: #ede9e4;
         }
-
-        #root {
-          width: 100%;
-          max-width: 460px;
-          margin: 0 auto;
-          background: #fff;
-          box-shadow: 0 0 44px rgba(20, 24, 40, 0.16);
-        }
       }
 
-      @media (min-width: 900px) and (prefers-color-scheme: dark) {
+      @media (min-width: 768px) and (prefers-color-scheme: dark) {
         body {
           background: #0d0f12;
         }
-        #root {
-          background: #11141b;
-          box-shadow: 0 0 44px rgba(0, 0, 0, 0.5);
-        }
       }
     </style>
-  <link rel="preload" href="/app/_expo/static/css/web-aadf1ae0aa2f746334e18725737f8c1a.css" as="style"><link rel="stylesheet" href="/app/_expo/static/css/web-aadf1ae0aa2f746334e18725737f8c1a.css"><link rel="icon" href="/app/favicon.ico" /></head>
+  <link rel="preload" href="/app/_expo/static/css/web-da1859225bdbc2b76c3f2425e368c7dd.css" as="style"><link rel="stylesheet" href="/app/_expo/static/css/web-da1859225bdbc2b76c3f2425e368c7dd.css"><link rel="icon" href="/app/favicon.ico" /></head>
 
   <body>
     <!-- Use static rendering with Expo Router to support running without JavaScript. -->
@@ -85,6 +80,6 @@
     </noscript>
     <!-- The root element for your Expo app. -->
     <div id="root"></div>
-  <script src="/app/_expo/static/js/web/entry-22fa4c3e1f7840cbd88f91e884bd0a6b.js" defer></script>
+  <script src="/app/_expo/static/js/web/entry-b9155c35880575cf3034a89efef5545f.js" defer></script>
 </body>
 </html>
