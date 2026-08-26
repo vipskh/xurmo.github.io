@@ -1,85 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uz">
   <head>
     <meta charset="utf-8" />
-    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-    <!-- Telegram WebView o'z sarlavha panelini qo'yadi va klaviatura ochilganda
-         oynani qisqartiradi. maximum-scale/user-scalable ilova ekranini telefon
-         ilovasidek tutadi (brauzer sahifasidek emas); viewport-fit=cover esa
-         pastki qismini to'liq egallaydi. -->
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no, viewport-fit=cover"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Xurmo</title>
-
-    <!-- Telegram Mini App SDK — `window.Telegram.WebApp` ni yaratadi, uni
-         lib/telegram.ts o'qiydi.
-         Ilova bundle'i <body> oxirida `defer` bilan yuklanadi, ya'ni bu skript
-         undan OLDIN ishga tushadi — lib/telegram.ts ilova ko'tarilishi bilanoq
-         initData ni o'qiydi (avtomatik kirish uchun), shuning uchun WebApp
-         obyekti o'shanda tayyor bo'lishi shart.
-         Telegram bu faylni FAQAT o'z domenidan yuklashni talab qiladi — o'z
-         serveringizga nusxalamang.
-         Telegram tashqarisida (oddiy brauzer) skript yuklanadi-yu, initData
-         bo'sh bo'ladi va lib/telegram.ts butunlay no-op bo'lib qoladi. -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
-    <style id="expo-reset">
-      /* These styles make the body full-height */
-      html,
-      body {
-        height: 100%;
-      }
-      /* These styles disable body scrolling if you are using <ScrollView> */
-      body {
-        overflow: hidden;
-      }
-      /* These styles make the root element full-height */
-      #root {
-        display: flex;
-        height: 100%;
-        flex: 1;
-      }
-
-      /* PLANSHET/KOMPYUTER ko'rinishi.
-         ESKI YONDASHUV (endi olib tashlandi): butun ilovani telefon
-         kengligidagi ustunga o'rab, katta monitorda "suzib turgan
-         telefon" ko'rinishida ko'rsatish (Telegram Web uslubi). Bu
-         haqiqiy desktop tajriba emas edi — foydalanuvchi buni
-         tanimadi ("men computerda telefon ekranini ko'rishni
-         hohlamayman").
-
-         YANGI: #root ENDI TO'LIQ KENGLIKDA — chunki ichida endi
-         doimiy tepa navbar bor (components/DesktopNavBar.tsx, faqat
-         web'da va >=768px'da ko'rinadi) va u chekka-chekkagacha
-         cho'zilishi kerak. Har bir tab-ekranning O'ZI (768px'dan keng
-         ekranda) markazlashgan "kontent qutisi" ichida turadi —
-         buni endi shu yerda emas, app/(root)/(tabs)/_layout.tsx'dagi
-         `sceneContainerStyle` boshqaradi (navbar tagida, ekran
-         darajasida) — shuning uchun bu yerda #root uchun boshqa
-         maxWidth/margin qolmadi. */
-      @media (min-width: 768px) {
-        body {
-          background: #ede9e4;
-        }
-      }
-
-      @media (min-width: 768px) and (prefers-color-scheme: dark) {
-        body {
-          background: #0d0f12;
-        }
-      }
-    </style>
-  <link rel="preload" href="/app/_expo/static/css/web-da1859225bdbc2b76c3f2425e368c7dd.css" as="style"><link rel="stylesheet" href="/app/_expo/static/css/web-da1859225bdbc2b76c3f2425e368c7dd.css"><link rel="icon" href="/app/favicon.ico" /></head>
-
+    <!-- Ilovaning haqiqiy joyi /app/ da (baseUrl shunga sozlangan, har
+         deploy'da yangilanadi). Bu yerda ESKI, qotib qolgan Expo build
+         nusxasi turgan edi (2026-08-19'dan qolgan) — undagi JS fayli
+         allaqachon o'chirilgan (har deploy eskisini tozalaydi), shuning
+         uchun sahifa OQ qolardi. Endi shunchaki /app/ ga yo'naltiradi —
+         ikkita nusxani alohida yangilab yurishdan ko'ra ishonchli. -->
+    <meta http-equiv="refresh" content="0; url=/app/" />
+    <link rel="canonical" href="https://xurmo.me/app/" />
+    <script>location.replace("/app/");</script>
+  </head>
   <body>
-    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
-    <noscript>
-      You need to enable JavaScript to run this app.
-    </noscript>
-    <!-- The root element for your Expo app. -->
-    <div id="root"></div>
-  <script src="/app/_expo/static/js/web/entry-8f20845cd17af87aedabc6aba65fff89.js" defer></script>
-</body>
+    <p>Yo'naltirilmoqda… <a href="/app/">bu yerni bosing</a>.</p>
+  </body>
 </html>
